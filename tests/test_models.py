@@ -148,6 +148,19 @@ class TestSyncReference:
         assert len(ref.identifier) == 16
         assert ref.hearing_impaired is True
 
+    def test_external_subtitle_id_is_deterministic(self):
+        """Test that external subtitle ID is deterministic."""
+        data = {
+            "path": "/subs/movie.en.srt",
+            "name": "English",
+            "language": "en",
+        }
+        ref1 = SyncReference.from_external_subtitle(data)
+        ref2 = SyncReference.from_external_subtitle(data)
+        # Same path should generate the same opaque ID
+        assert ref1.identifier == ref2.identifier
+        assert len(ref1.identifier) == 16
+
 
 class TestSyncReferences:
     """Test SyncReferences."""

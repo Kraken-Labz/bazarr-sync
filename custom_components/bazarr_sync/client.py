@@ -28,6 +28,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def generate_external_reference_id(path: str) -> str:
+    """Generate an opaque external reference ID from a filesystem path."""
+    if not path:
+        return ""
+    return hashlib.sha256(path.encode()).hexdigest()[:16]
+
+
 def _generate_correlation_id() -> str:
     """Generate a short correlation ID for request tracing."""
     return uuid.uuid4().hex[:8]
@@ -518,7 +525,8 @@ class BazarrClient:
             if track.get("stream") == reference_id:
                 return reference_id
         for track in sync_result.get("external_subtitles_tracks", []):
-            if track.get("path") == reference_id:
+            path = track.get("path", "")
+            if generate_external_reference_id(path) == reference_id:
                 return reference_id
 
         return None

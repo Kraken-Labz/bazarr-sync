@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
+
+
+def generate_external_reference_id(path: str) -> str:
+    """Generate an opaque external reference ID from a filesystem path."""
+    if not path:
+        return ""
+    return hashlib.sha256(path.encode()).hexdigest()[:16]
 
 
 @dataclass
@@ -136,9 +144,7 @@ class SyncReference:
         """Create from external subtitle."""
         path = data.get("path", "")
         # Generate opaque identifier for external subtitle to avoid exposing filesystem path
-        import hashlib
-
-        opaque_id = hashlib.sha256(path.encode()).hexdigest()[:16] if path else ""
+        opaque_id = generate_external_reference_id(path)
         return cls(
             kind="external_subtitle",
             identifier=opaque_id,

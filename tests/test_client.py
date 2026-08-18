@@ -15,6 +15,7 @@ from custom_components.bazarr_sync.client import (
     BazarrNotFoundError,
     BazarrTimeoutError,
     BazarrError,
+    generate_external_reference_id,
 )
 from tests.conftest import MockResponse, make_mock_request, MockRequestContextManager
 
@@ -579,3 +580,22 @@ class TestBazarrClient:
             assert client._semaphore._value == 10
             assert client._max_retries == 5
             assert client._retry_base_delay == 1.0
+
+    async def test_external_reference_id_generation(self, hass):
+        """Test that external reference ID generation is deterministic."""
+        path = "/subs/movie.en.srt"
+        expected_opaque_id = generate_external_reference_id(path)
+
+        # Test that the ID is deterministic
+        id1 = generate_external_reference_id(path)
+        id2 = generate_external_reference_id(path)
+        assert id1 == id2
+        assert len(id1) == 16
+
+        # Test that different paths generate different IDs
+        path2 = "/subs/movie.pt.srt"
+        id2 = generate_external_reference_id(path2)
+        assert id2 != generate_external_reference_id(path)
+
+        # Test that empty path returns empty string
+        assert generate_external_reference_id("") == ""
