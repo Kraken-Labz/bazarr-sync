@@ -81,7 +81,7 @@ Synchronize an existing installed subtitle against a reference track.
 | `config_entry_id` | string | Yes | Config Entry ID of the Bazarr Sync instance |
 | `media_type` | `movie` \| `episode` | Yes | Media type |
 | `media_id` | integer | Yes | `radarrId` or `sonarrEpisodeId` |
-| `subtitle_id` | string | Yes | Installed subtitle file path (from `get_subtitles` WebSocket) |
+| `subtitle_id` | string | Yes | Opaque subtitle identifier (from `get_subtitles` WebSocket) |
 | `reference_id` | string | No | Sync reference stream identifier (e.g. `a:0`, `s:0`) from `get_sync_references` |
 | `hearing_impaired` | boolean | No | Default: false |
 | `forced` | boolean | No | Default: false |
@@ -91,7 +91,7 @@ Synchronize an existing installed subtitle against a reference track.
 | `gss` | boolean | No | Default: false |
 | `series_id` | integer | No | `sonarrSeriesId` (required for episodes) |
 
-**Important**: The frontend does not provide filesystem paths. The backend resolves `subtitle_id` and validates `reference_id` against installed subtitles and sync references.
+**Important**: The frontend does not provide filesystem paths. The backend resolves opaque `subtitle_id` and validates opaque `reference_id` against installed subtitles and sync references.
 
 ## WebSocket API
 
@@ -168,7 +168,7 @@ Get sync references (audio tracks, embedded subtitles) for an installed subtitle
   "config_entry_id": "<entry_id>",
   "media_type": "movie|episode",
   "media_id": 123,
-  "subtitle_id": "/path/to/subtitle.srt",
+  "subtitle_id": "abc123def4567890",
   "series_id": 456
 }
 ```
@@ -183,7 +183,7 @@ Synchronize a subtitle against a reference track.
   "config_entry_id": "<entry_id>",
   "media_type": "movie|episode",
   "media_id": 123,
-  "subtitle_id": "/path/to/subtitle.srt",
+  "subtitle_id": "abc123def4567890",
   "reference_id": "a:0",
   "hearing_impaired": false,
   "forced": false,

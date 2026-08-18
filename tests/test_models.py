@@ -143,7 +143,9 @@ class TestSyncReference:
         }
         ref = SyncReference.from_external_subtitle(data)
         assert ref.kind == "external_subtitle"
-        assert ref.identifier == "/subs/movie.en.srt"
+        # identifier is now an opaque hash, not the path
+        assert ref.identifier != "/subs/movie.en.srt"
+        assert len(ref.identifier) == 16
         assert ref.hearing_impaired is True
 
 

@@ -134,9 +134,14 @@ class SyncReference:
     @classmethod
     def from_external_subtitle(cls, data: dict[str, Any]) -> SyncReference:
         """Create from external subtitle."""
+        path = data.get("path", "")
+        # Generate opaque identifier for external subtitle to avoid exposing filesystem path
+        import hashlib
+
+        opaque_id = hashlib.sha256(path.encode()).hexdigest()[:16] if path else ""
         return cls(
             kind="external_subtitle",
-            identifier=data.get("path", ""),
+            identifier=opaque_id,
             label=data.get("name", ""),
             language=data.get("language", ""),
             forced=data.get("forced", False),

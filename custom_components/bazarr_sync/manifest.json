@@ -1,7 +1,7 @@
 {
   "domain": "bazarr_sync",
   "name": "Bazarr Sync",
-  "codeowners": ["@Kraken-Labz"],
+  "codeowners": ["@phgsbr"],
   "config_flow": true,
   "documentation": "https://github.com/Kraken-Labz/bazarr-sync",
   "iot_class": "local_polling",

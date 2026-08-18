@@ -67,7 +67,6 @@ async def _ws_get_media(
                     {
                         "radarrId": item.get("radarrId"),
                         "title": item.get("title"),
-                        "path": item.get("path"),
                         "year": item.get("year"),
                         "poster": item.get("poster"),
                     }
@@ -78,7 +77,6 @@ async def _ws_get_media(
                         "sonarrEpisodeId": item.get("sonarrEpisodeId"),
                         "sonarrSeriesId": item.get("sonarrSeriesId"),
                         "title": item.get("title"),
-                        "path": item.get("path"),
                         "season": item.get("season"),
                         "episode": item.get("episode"),
                     }
@@ -88,7 +86,6 @@ async def _ws_get_media(
                     {
                         "sonarrSeriesId": item.get("sonarrSeriesId"),
                         "title": item.get("title"),
-                        "path": item.get("path"),
                         "year": item.get("year"),
                         "poster": item.get("poster"),
                         "episodeFileCount": item.get("episodeFileCount"),
