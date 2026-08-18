@@ -1,9 +1,9 @@
-# STATE.md — Bazarr Bridge (HA)
+# STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
 CURRENT_TASK: Aguardando validação HA-LAB pelo usuário
-STATUS: completed (preparação técnica + repositório GitHub criado)
-LAST_VALIDATED: FASE 9 preparação técnica completa + repositório GitHub criado + 65 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean + Hassfest/HACS CI ready
+STATUS: completed (preparação técnica + repositório GitHub criado + auto-release removido)
+LAST_VALIDATED: FASE 9 preparação técnica completa + repositório GitHub criado + auto-release removido + 67 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean + Hassfest/HACS CI ready
 BLOCKERS: none
 NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via Custom Repository (agora real) e validar
 
@@ -11,7 +11,7 @@ NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via Custom Repository (agor
 
 ## STATUS
 
-**Fase 9 preparação técnica concluída** — Projeto tecnicamente pronto para instalação no HA-LAB. Repositório GitHub público criado.
+**Fase 9 preparação técnica concluída** — Projeto tecnicamente pronto para instalação no HA-LAB. Repositório GitHub público criado, auto-release removido.
 
 Fases 0–9 preparação técnica concluídas com gates validados:
 - F0: Fundação ✅
@@ -23,7 +23,7 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 - F6: MVP Real de Filme ✅
 - F7: MVP Real de Episódio ✅
 - F8: Hardening + Domain Migration + Config Entry API Migration ✅
-- F9: Preparação HACS (manifest, CI, docs, packaging, GitHub repo) ✅
+- F9: Preparação HACS (manifest, CI, docs, packaging, GitHub repo, auto-release removido) ✅
 
 ---
 
@@ -31,13 +31,13 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 
 | Item | Status |
 |------|--------|
-| `manifest.json` | domain `bazarr_sync`, version `0.1.0-beta.1`, codeowners `@Kraken-Labz`, docs próprio |
+| `manifest.json` | domain `bazarr_sync`, version `0.1.0-beta.1`, codeowners `@phgsbr`, docs próprio |
 | `hacs.json` | `homeassistant: ">=2025.11.0"` |
 | `icon.png` | 256x256 RGBA criado |
 | `README.md` | Instruções de instalação via HACS Custom Repository (repo real) |
 | `CHANGELOG.md` | Atualizado com todas as mudanças F0–F9 |
 | `translations/en.json` | Atualizado para `config_entry_id`, `subtitle_id`, `reference_id` |
-| CI (GitHub Actions) | pytest, mypy, ruff, black, Hassfest, HACS |
+| CI (GitHub Actions) | pytest, mypy, ruff, black, Hassfest, HACS (auto-release removido) |
 | Version | `0.1.0-beta.1` |
 
 ---
@@ -62,7 +62,7 @@ O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-
 ## VALIDAÇÕES AUTOMÁTICAS
 
 ```
-pytest: 65 passed (31 client + 9 models + 13 services + 12 websocket)
+pytest: 67 passed (31 client + 9 models + 13 services + 12 websocket)
 Black: clean
 Ruff: all checks pass
 MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
@@ -79,8 +79,8 @@ MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
 2. Instalar "Bazarr Sync" via HACS
 3. Reiniciar Home Assistant
 4. Adicionar integração "Bazarr Sync" via Settings → Devices & Services
-5. Configurar URL e API Key do Bazarr
-6. Validar os seguintes pontos:
+4. Configurar URL e API Key do Bazarr
+5. Validar os seguintes pontos:
 
 | Check | Descrição |
 |-------|-----------|
