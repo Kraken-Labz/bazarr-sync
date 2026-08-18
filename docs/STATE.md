@@ -2,16 +2,16 @@
 
 CURRENT_PHASE: F9
 CURRENT_TASK: Aguardando validação HA-LAB pelo usuário
-STATUS: completed (preparação técnica)
-LAST_VALIDATED: FASE 9 preparação técnica completa + 65 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean + Hassfest/HACS CI ready
-BLOCKERS: GITHUB_REPOSITORY: not_created — repositório público ainda não criado
-NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via instalação local/manual e validar
+STATUS: completed (preparação técnica + repositório GitHub criado)
+LAST_VALIDATED: FASE 9 preparação técnica completa + repositório GitHub criado + 65 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean + Hassfest/HACS CI ready
+BLOCKERS: none
+NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via Custom Repository (agora real) e validar
 
 ---
 
 ## STATUS
 
-**Fase 9 preparação técnica concluída** — Projeto tecnicamente pronto para instalação no HA-LAB.
+**Fase 9 preparação técnica concluída** — Projeto tecnicamente pronto para instalação no HA-LAB. Repositório GitHub público criado.
 
 Fases 0–9 preparação técnica concluídas com gates validados:
 - F0: Fundação ✅
@@ -23,7 +23,7 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 - F6: MVP Real de Filme ✅
 - F7: MVP Real de Episódio ✅
 - F8: Hardening + Domain Migration + Config Entry API Migration ✅
-- F9: Preparação HACS (manifest, CI, docs, packaging) ✅
+- F9: Preparação HACS (manifest, CI, docs, packaging, GitHub repo) ✅
 
 ---
 
@@ -31,10 +31,10 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 
 | Item | Status |
 |------|--------|
-| `manifest.json` | domain `bazarr_sync`, version `0.1.0-beta.1`, codeowners `@phgsbr`, docs próprio |
+| `manifest.json` | domain `bazarr_sync`, version `0.1.0-beta.1`, codeowners `@Kraken-Labz`, docs próprio |
 | `hacs.json` | `homeassistant: ">=2025.11.0"` |
 | `icon.png` | 256x256 RGBA criado |
-| `README.md` | Instruções de instalação local/manual (repo GitHub ainda não criado) |
+| `README.md` | Instruções de instalação via HACS Custom Repository (repo real) |
 | `CHANGELOG.md` | Atualizado com todas as mudanças F0–F9 |
 | `translations/en.json` | Atualizado para `config_entry_id`, `subtitle_id`, `reference_id` |
 | CI (GitHub Actions) | pytest, mypy, ruff, black, Hassfest, HACS |
@@ -45,14 +45,17 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 ## ESTADO REAL DO GITHUB
 
 ```
-GITHUB_REPOSITORY: not_created
+GITHUB_REPOSITORY: created (https://github.com/Kraken-Labz/bazarr-sync)
 PUBLIC_RELEASE: none
-HACS_CUSTOM_REPOSITORY_TEST: pending_repository_creation
-GITHUB_OWNER: phgsbr
-REPOSITORY_NAME: bazarr-sync (previsto)
+HACS_CUSTOM_REPOSITORY_TEST: ready (repo real disponível)
+GITHUB_OWNER: Kraken-Labz
+REPOSITORY_NAME: bazarr-sync
+GITHUB_URL: https://github.com/Kraken-Labz/bazarr-sync
+UPSTREAM: https://github.com/owenvoke/hass-bazarr
+ORIGIN: https://github.com/Kraken-Labz/bazarr-sync
 ```
 
-O repositório público **ainda não existe**. A publicação do repositório é um checkpoint humano.
+O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-sync
 
 ---
 
@@ -69,13 +72,15 @@ MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
 
 ## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB
 
-**Ação requerida pelo usuário (instalação local/manual):**
+**Ação requerida pelo usuário (agora via HACS Custom Repository real):**
 
-1. Copiar `custom_components/bazarr_sync` para o HA-LAB em `config/custom_components/bazarr_sync`
-2. Reiniciar Home Assistant
-3. Adicionar integração "Bazarr Sync" via Settings → Devices & Services
-4. Configurar URL e API Key do Bazarr
-5. Validar os seguintes pontos:
+1. Adicionar este repositório como Custom Repository no HACS (category: Integration)
+   - URL: `https://github.com/Kraken-Labz/bazarr-sync`
+2. Instalar "Bazarr Sync" via HACS
+3. Reiniciar Home Assistant
+4. Adicionar integração "Bazarr Sync" via Settings → Devices & Services
+5. Configurar URL e API Key do Bazarr
+6. Validar os seguintes pontos:
 
 | Check | Descrição |
 |-------|-----------|
@@ -97,8 +102,7 @@ MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
 ## PENDÊNCIAS CONHECIDAS
 
 - HA-LAB validation (requer ambiente do usuário)
-- Criação do repositório GitHub público (checkpoint humano: CREATE_PUBLIC_GITHUB_REPOSITORY)
-- Teste de HACS Custom Repository (após criação do repositório)
+- Teste de HACS Custom Repository (repositório real disponível)
 - Teste de upgrade/reinstall/remoção limpa no HA-LAB
 - Teste de múltiplas ConfigEntries simultâneas no HA-LAB
 
@@ -106,10 +110,10 @@ MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
 
 ## PRÓXIMO: PROJETO B
 
-Após validação HA-LAB verde + criação do repositório GitHub → Projeto B (Jellyfin Bazarr Sync Plugin - .NET).
+Após validação HA-LAB verde → Projeto B (Jellyfin Bazarr Sync Plugin - .NET).
 
 ---
 
-**F9_PREP_COMPLETE: ready for HA-LAB validation (local/manual)**
+**F9_PREP_COMPLETE: ready for HA-LAB validation (HACS Custom Repository real)**
 
-**NEXT_HUMAN_CHECKPOINT: CREATE_PUBLIC_GITHUB_REPOSITORY (owner: phgsbr, repo: bazarr-sync)**
+**NEXT_HUMAN_CHECKPOINT: HA_LAB_VALIDATION_COMPLETE**

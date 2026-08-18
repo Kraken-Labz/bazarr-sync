@@ -13,15 +13,13 @@ Custom Home Assistant integration for [Bazarr](https://www.bazarr.media/) that p
 
 ### As Custom Repository (Pre-Release)
 
-> **Note**: The public GitHub repository has not been created yet. The following instructions will apply once the repository is published. For current local testing, use the Manual Installation method below.
-
 1. Open HACS in Home Assistant
 2. Go to **Integrations** → **⋮** (three dots) → **Custom repositories**
-3. Add repository URL: `https://github.com/phgsbr/bazarr-sync` (to be created)
-3. Category: **Integration**
-4. Click **Add**
-5. Search for **Bazarr Sync** in HACS and install
-6. Restart Home Assistant
+3. Add repository URL: `https://github.com/Kraken-Labz/bazarr-sync`
+4. Category: **Integration**
+5. Click **Add**
+6. Search for **Bazarr Sync** in HACS and install
+7. Restart Home Assistant
 7. Add the integration via **Settings → Devices & Services → Add Integration → Bazarr Sync**
 8. Provide your Bazarr URL and API key
 

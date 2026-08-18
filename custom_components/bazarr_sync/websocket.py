@@ -104,7 +104,7 @@ async def _ws_get_media(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_TYPE_GET_MEDIA,
-        vol.Required("config_entry"): str,
+        vol.Required("config_entry_id"): str,
         vol.Optional("media_type"): vol.In(["movies", "episodes", "series"]),
         vol.Optional("series_id"): vol.Coerce(int),
     }
@@ -150,9 +150,15 @@ async def _ws_get_subtitles(
 
         filtered = []
         for sub in subtitles:
+            path = sub.get("path")
+            subtitle_id = (
+                client._generate_subtitle_id(media_type, media_id, path)
+                if path
+                else None
+            )
             filtered.append(
                 {
-                    "path": sub.get("path"),
+                    "subtitle_id": subtitle_id,
                     "language": sub.get("name"),
                     "code2": sub.get("code2"),
                     "code3": sub.get("code3"),
@@ -171,7 +177,7 @@ async def _ws_get_subtitles(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_TYPE_GET_SUBTITLES,
-        vol.Required("config_entry"): str,
+        vol.Required("config_entry_id"): str,
         vol.Required("media_type"): vol.In(["movie", "episode"]),
         vol.Required("media_id"): vol.Coerce(int),
         vol.Optional("series_id"): vol.Coerce(int),

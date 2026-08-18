@@ -201,6 +201,7 @@ class TestWebSocket:
                     }
                 ]
             }
+            mock_client._generate_subtitle_id.return_value = "abc123def456"
 
             msg = {
                 "id": 5,
@@ -219,7 +220,8 @@ class TestWebSocket:
             result = args[1]
             assert "subtitles" in result
             assert len(result["subtitles"]) == 1
-            assert result["subtitles"][0]["path"] == "/subs/movie.en.srt"
+            assert result["subtitles"][0]["subtitle_id"] is not None
+            assert isinstance(result["subtitles"][0]["subtitle_id"], str)
 
     async def test_ws_search_subtitles(self, hass, mock_client, mock_connection):
         """Test search subtitles."""

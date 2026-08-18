@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import uuid
 from typing import Any
@@ -413,22 +414,25 @@ class BazarrClient:
         result = await self._request("GET", API_SUBTITLES, params=params)
         return result.get("data", {}) if result else {}
 
-    async def async_get_installed_subtitle_path(
+    def _generate_subtitle_id(
+        self, media_type: str, media_id: int, subtitle_path: str
+    ) -> str:
+        """Generate an opaque subtitle ID from media info and subtitle path."""
+        # Create a deterministic opaque ID from media info and subtitle path
+        content = f"{media_type}:{media_id}:{subtitle_path}"
+        return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+    async def _resolve_subtitle_id(
         self,
         media_type: str,
         media_id: int,
         subtitle_id: str,
         series_id: int | None = None,
     ) -> str | None:
-        """Get the installed subtitle file path for a media item by subtitle_id.
-
-        Resolves the path server-side by querying Bazarr for the media item
-        and validating the subtitle_id against installed subtitles.
-        The subtitle_id is the filesystem path of the installed subtitle.
-        """
+        """Resolve an opaque subtitle_id back to the filesystem path."""
         if media_type == "movie":
             result = await self.async_get_movies(radarr_ids=[media_id])
-            data = result.get("data", [])
+            data = result.get("data", []) if result else []
         else:
             if series_id is None:
                 raise ValueError("series_id is required for episodes")
@@ -441,10 +445,30 @@ class BazarrClient:
         subtitles = item.get("subtitles", [])
 
         for sub in subtitles:
-            if sub.get("path") == subtitle_id:
-                return sub.get("path")
+            path = sub.get("path")
+            if path:
+                generated_id = self._generate_subtitle_id(media_type, media_id, path)
+                if generated_id == subtitle_id:
+                    return path
 
         return None
+
+    async def async_get_installed_subtitle_path(
+        self,
+        media_type: str,
+        media_id: int,
+        subtitle_id: str,
+        series_id: int | None = None,
+    ) -> str | None:
+        """Get the installed subtitle file path for a media item by opaque subtitle_id.
+
+        Resolves the path server-side by querying Bazarr for the media item
+        and validating the subtitle_id against installed subtitles.
+        The subtitle_id is an opaque identifier (hash of media_type:media_id:path).
+        """
+        return await self._resolve_subtitle_id(
+            media_type, media_id, subtitle_id, series_id
+        )
 
     async def async_get_sync_reference_identifier(
         self,

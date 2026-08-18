@@ -14,6 +14,14 @@ Integração Home Assistant para Bazarr que expõe capacidade de busca, download
 | **Domain** | **`bazarr_sync`** |
 | HA mínimo | 2025.11.0 |
 
+## 3. Repositório do Projeto
+
+| Item | Valor |
+|------|-------|
+| **Repositório** | **https://github.com/Kraken-Labz/bazarr-sync** |
+| Owner | Kraken-Labz |
+| Público | Sim |
+
 ## 3. Arquitetura Existente (preservada)
 
 ```
