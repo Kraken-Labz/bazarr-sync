@@ -1,0 +1,145 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Service is already configured",
+      "reauth_successful": "Re-authentication was successful",
+      "reconfigure_successful": "Re-configuration was successful",
+      "unknown": "Unexpected error"
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_api_key": "Invalid API key"
+    },
+    "flow_title": "{name}",
+    "step": {
+      "reauth_confirm": {
+        "description": "The Bazarr Sync integration needs to be manually re-authenticated. Please check the API key at: {api_token_url}",
+        "title": "Authentication expired for {name}",
+        "data": {
+          "api_key": "API key"
+        }
+      },
+      "user": {
+        "data": {
+          "api_key": "API key",
+          "url": "URL"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "health": {
+        "name": "Health"
+      }
+    },
+    "sensor": {
+      "wanted_movies": {
+        "name": "Wanted Movies",
+        "unit_of_measurement": "movies"
+      },
+      "wanted_episodes": {
+        "name": "Wanted Episodes",
+        "unit_of_measurement": "episodes"
+      }
+    }
+  },
+  "services": {
+    "search_subtitles": {
+      "name": "Search Subtitles",
+      "description": "Search for available subtitles for a movie or episode",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "media_id": {
+          "name": "Media ID"
+        },
+        "series_id": {
+          "name": "Series ID"
+        }
+      }
+    },
+    "download_subtitle": {
+      "name": "Download Subtitle",
+      "description": "Download a specific subtitle found in search",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "media_id": {
+          "name": "Media ID"
+        },
+        "series_id": {
+          "name": "Series ID"
+        },
+        "provider": {
+          "name": "Provider"
+        },
+        "subtitle": {
+          "name": "Subtitle ID"
+        },
+        "language": {
+          "name": "Language"
+        },
+        "hearing_impaired": {
+          "name": "Hearing Impaired"
+        },
+        "forced": {
+          "name": "Forced"
+        },
+        "original_format": {
+          "name": "Original Format"
+        }
+      }
+    },
+    "sync_subtitle": {
+      "name": "Sync Subtitle",
+      "description": "Synchronize a subtitle against a reference track",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "media_id": {
+          "name": "Media ID"
+        },
+        "subtitle_id": {
+          "name": "Subtitle ID"
+        },
+        "reference_id": {
+          "name": "Reference ID"
+        },
+        "hearing_impaired": {
+          "name": "Hearing Impaired"
+        },
+        "forced": {
+          "name": "Forced"
+        },
+        "original_format": {
+          "name": "Original Format"
+        },
+        "max_offset_seconds": {
+          "name": "Max Offset Seconds"
+        },
+        "no_fix_framerate": {
+          "name": "No Fix Framerate"
+        },
+        "gss": {
+          "name": "Golden Section Search"
+        },
+        "series_id": {
+          "name": "Series ID"
+        }
+      }
+    }
+  }
+}

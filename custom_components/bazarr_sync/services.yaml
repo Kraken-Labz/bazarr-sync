@@ -1,0 +1,194 @@
+name: "Bazarr Sync Subtitle Search"
+description: "Search for available subtitles for a movie or episode"
+fields:
+  config_entry_id:
+    name: Config Entry
+    description: The config entry ID for the Bazarr Sync integration
+    required: true
+    selector:
+      config_entry:
+        integration: bazarr_sync
+  media_type:
+    name: Media Type
+    description: Type of media (movie or episode)
+    required: true
+    selector:
+      select:
+        options:
+          - movie
+          - episode
+  media_id:
+    name: Media ID
+    description: Radarr ID (movie) or Sonarr Episode ID (episode)
+    required: true
+    selector:
+      number:
+        min: 1
+  series_id:
+    name: Series ID
+    description: Sonarr Series ID (required for episodes)
+    required: false
+    selector:
+      number:
+        min: 1
+---
+name: "Bazarr Sync Download Subtitle"
+description: "Download a specific subtitle found in search"
+fields:
+  config_entry_id:
+    name: Config Entry
+    description: The config entry ID for the Bazarr Sync integration
+    required: true
+    selector:
+      config_entry:
+        integration: bazarr_sync
+  media_type:
+    name: Media Type
+    description: Type of media (movie or episode)
+    required: true
+    selector:
+      select:
+        options:
+          - movie
+          - episode
+  media_id:
+    name: Media ID
+    description: Radarr ID (movie) or Sonarr Episode ID (episode)
+    required: true
+    selector:
+      number:
+        min: 1
+  series_id:
+    name: Series ID
+    description: Sonarr Series ID (required for episodes)
+    required: false
+    selector:
+      number:
+        min: 1
+  provider:
+    name: Provider
+    description: Subtitle provider name
+    required: true
+    selector:
+      text:
+  subtitle:
+    name: Subtitle ID
+    description: Subtitle identifier from search results
+    required: true
+    selector:
+      text:
+  language:
+    name: Language
+    description: Language code (e.g., en, pt)
+    required: true
+    selector:
+      text:
+  hearing_impaired:
+    name: Hearing Impaired
+    description: Whether subtitle is for hearing impaired
+    required: false
+    default: false
+    selector:
+      boolean:
+  forced:
+    name: Forced
+    description: Whether subtitle is forced
+    required: false
+    default: false
+    selector:
+      boolean:
+  original_format:
+    name: Original Format
+    description: Keep original subtitle format
+    required: false
+    default: false
+    selector:
+      boolean:
+---
+name: "Bazarr Sync Subtitle"
+description: "Synchronize a subtitle against a reference track"
+fields:
+  config_entry_id:
+    name: Config Entry
+    description: The config entry ID for the Bazarr Sync integration
+    required: true
+    selector:
+      config_entry:
+        integration: bazarr_sync
+  media_type:
+    name: Media Type
+    description: Type of media (movie or episode)
+    required: true
+    selector:
+      select:
+        options:
+          - movie
+          - episode
+  media_id:
+    name: Media ID
+    description: Radarr ID (movie) or Sonarr Episode ID (episode)
+    required: true
+    selector:
+      number:
+        min: 1
+  subtitle_id:
+    name: Subtitle ID
+    description: Installed subtitle file path (from get_subtitles)
+    required: true
+    selector:
+      text:
+  reference_id:
+    name: Reference ID
+    description: Sync reference stream identifier (e.g., a:0, s:0) from get_sync_references
+    required: false
+    selector:
+      text:
+  hearing_impaired:
+    name: Hearing Impaired
+    description: Whether subtitle is for hearing impaired
+    required: false
+    default: false
+    selector:
+      boolean:
+  forced:
+    name: Forced
+    description: Whether subtitle is forced
+    required: false
+    default: false
+    selector:
+      boolean:
+  original_format:
+    name: Original Format
+    description: Keep original subtitle format
+    required: false
+    default: false
+    selector:
+      boolean:
+  max_offset_seconds:
+    name: Max Offset Seconds
+    description: Maximum offset allowed
+    required: false
+    selector:
+      number:
+        min: 0
+  no_fix_framerate:
+    name: No Fix Framerate
+    description: Don't try to fix framerate
+    required: false
+    default: false
+    selector:
+      boolean:
+  gss:
+    name: Golden Section Search
+    description: Use Golden Section Search algorithm
+    required: false
+    default: false
+    selector:
+      boolean:
+  series_id:
+    name: Series ID
+    description: Sonarr Series ID (required for episodes)
+    required: false
+    selector:
+      number:
+        min: 1

@@ -1,0 +1,10 @@
+{
+  "domain": "bazarr_sync",
+  "name": "Bazarr Sync",
+  "codeowners": ["@phgsbr"],
+  "config_flow": true,
+  "documentation": "https://github.com/phgsbr/bazarr-sync",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/phgsbr/bazarr-sync/issues",
+  "version": "0.1.0-beta.1"
+}
