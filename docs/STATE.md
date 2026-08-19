@@ -1,11 +1,11 @@
 # STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
-CURRENT_TASK: Aguardando validação HA-LAB pelo usuário
-STATUS: completed (preparação técnica + repositório GitHub criado + external reference roundtrip corrigido)
-LAST_VALIDATED: external reference resolve para path real + helper centralizado em util.py + 73 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
+CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (services.yaml corrigido)
+STATUS: HA-LAB installation success; services.yaml structure fixed
+LAST_VALIDATED: HA-LAB install OK + entities + actions + Bazarr connection; services.yaml single-doc + 78 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
 BLOCKERS: none
-NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via Custom Repository (agora real) e validar
+NEXT_ACTION: Usuário atualizar Bazarr Sync no HA-LAB via HACS e reiniciar/recarregar
 
 ---
 
@@ -62,7 +62,7 @@ O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-
 ## VALIDAÇÕES AUTOMÁTICAS
 
 ```
-pytest: 73 passed
+pytest: 78 passed (73 + 5 services.yaml structure)
 Black: clean
 Ruff: all checks pass
 MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
@@ -83,6 +83,22 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 **cause:** invalid `homeassistant` version expression in `hacs.json` (`">=2025.11.0"` not accepted by HACS AwesomeVersion parser)  
 **fix:** `homeassistant: ">=2025.11.0"` -> `"2025.11.0"` (commit 5e0eac1)  
 **next:** usuário repetir download via HACS no HA-LAB
+
+---
+
+## HA-LAB INSTALLATION ATTEMPT 2
+
+**result:** success  
+**config entry:** loaded  
+**entities:** created (wanted_movies=17, wanted_episodes=297, health=OK)  
+**bazarr connection:** v1.6.0 detected  
+**actions registered:** 3 (search_subtitles, download_subtitle, sync_subtitle)  
+**services.yaml:** failed on first parse  
+
+**cause:** multi-document YAML with `---` separators  
+**fix:** single-document mapping keyed by action names (commit af42d62)  
+**tests added:** 5 tests for services.yaml structure (single doc, actions, no separators, fields, opaque ID desc)  
+**next:** usuário atualizar via HACS no HA-LAB e reiniciar/recarregar
 
 ---
 
