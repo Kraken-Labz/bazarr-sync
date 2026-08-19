@@ -530,3 +530,133 @@ class TestServicesYAML:
         assert (
             "path" not in subtitle_id_desc.lower()
         ), "subtitle_id is opaque ID, not filesystem path"
+
+
+class TestServiceRegistration:
+    """Test that services register with correct handler signature."""
+
+    @pytest.fixture(autouse=True)
+    def setup_services_mock(self, hass):
+        """Set up hass.services mock for registration tests."""
+        from unittest.mock import MagicMock
+
+        hass.services = MagicMock()
+        hass.services.async_register = MagicMock()
+        hass.services.async_services = MagicMock(return_value={})
+        yield
+        # Cleanup not needed as fixture is function-scoped
+
+    async def test_search_subtitles_handler_signature(
+        self, hass, mock_entry, mock_client
+    ):
+        """search_subtitles handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.services import _register_services
+        from custom_components.bazarr_sync.const import DOMAIN, ACTION_SEARCH_SUBTITLES
+
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            # Register services
+            _register_services(hass)
+
+            # Get the registered handler from the mock call
+            register_calls = hass.services.async_register.call_args_list
+            search_handler = None
+            for call_args in register_calls:
+                args, kwargs = call_args
+                if args[1] == ACTION_SEARCH_SUBTITLES:
+                    search_handler = args[2]
+                    break
+
+            assert search_handler is not None
+
+            # Call like Home Assistant does: handler(call) not handler(hass, call)
+            call = make_service_call(
+                {
+                    "config_entry_id": "test-entry",
+                    "media_type": "movie",
+                    "media_id": 244,
+                }
+            )
+
+            # Should not raise "missing 1 required positional argument: 'call'"
+            mock_client.async_search_movie_subtitles.return_value = []
+            await search_handler(call)
+
+            mock_client.async_search_movie_subtitles.assert_called_once_with(244)
+
+    async def test_download_subtitle_handler_signature(
+        self, hass, mock_entry, mock_client
+    ):
+        """download_subtitle handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.services import _register_services
+        from custom_components.bazarr_sync.const import DOMAIN, ACTION_DOWNLOAD_SUBTITLE
+
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            _register_services(hass)
+
+            register_calls = hass.services.async_register.call_args_list
+            download_handler = None
+            for call_args in register_calls:
+                args, kwargs = call_args
+                if args[1] == ACTION_DOWNLOAD_SUBTITLE:
+                    download_handler = args[2]
+                    break
+
+            assert download_handler is not None
+
+            call = make_service_call(
+                {
+                    "config_entry_id": "test-entry",
+                    "media_type": "movie",
+                    "media_id": 244,
+                    "provider": "opensubtitles",
+                    "subtitle": "sub123",
+                    "language": "en",
+                }
+            )
+
+            await download_handler(call)
+
+            mock_client.async_download_movie_subtitle.assert_called_once()
+
+    async def test_sync_subtitle_handler_signature(self, hass, mock_entry, mock_client):
+        """sync_subtitle handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.services import _register_services
+        from custom_components.bazarr_sync.const import DOMAIN, ACTION_SYNC_SUBTITLE
+
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            _register_services(hass)
+
+            register_calls = hass.services.async_register.call_args_list
+            sync_handler = None
+            for call_args in register_calls:
+                args, kwargs = call_args
+                if args[1] == ACTION_SYNC_SUBTITLE:
+                    sync_handler = args[2]
+                    break
+
+            assert sync_handler is not None
+
+            call = make_service_call(
+                {
+                    "config_entry_id": "test-entry",
+                    "media_type": "movie",
+                    "media_id": 244,
+                    "subtitle_id": "abc123",
+                }
+            )
+
+            mock_client.async_get_installed_subtitle_path.return_value = "/path/sub.srt"
+            mock_client.async_get_sync_reference_identifier.return_value = None
+
+            await sync_handler(call)
+
+            mock_client.async_sync_subtitle.assert_called_once()

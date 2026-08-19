@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from functools import partial
 
 import voluptuous as vol
 from homeassistant.core import (
@@ -205,10 +206,14 @@ def _register_services(hass: HomeAssistant) -> None:
         }
     )
 
+    search_handler = partial(async_search_subtitles, hass)
+    download_handler = partial(async_download_subtitle, hass)
+    sync_handler = partial(async_sync_subtitle, hass)
+
     hass.services.async_register(
         DOMAIN,
         ACTION_SEARCH_SUBTITLES,
-        async_search_subtitles,  # type: ignore[arg-type]
+        search_handler,
         schema=search_schema,
         supports_response=SupportsResponse.ONLY,
     )
@@ -216,13 +221,13 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN,
         ACTION_DOWNLOAD_SUBTITLE,
-        async_download_subtitle,  # type: ignore[arg-type]
+        download_handler,
         schema=download_schema,
     )
 
     hass.services.async_register(
         DOMAIN,
         ACTION_SYNC_SUBTITLE,
-        async_sync_subtitle,  # type: ignore[arg-type]
+        sync_handler,
         schema=sync_schema,
     )
