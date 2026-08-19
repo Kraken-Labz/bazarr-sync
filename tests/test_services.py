@@ -426,3 +426,107 @@ class TestServices:
 
             with pytest.raises(HomeAssistantError, match="not found"):
                 await async_sync_subtitle(hass, call)
+
+
+class TestServicesYAML:
+    """Test services.yaml structure."""
+
+    def test_services_yaml_single_document(self):
+        """services.yaml must be a single YAML document (no --- separators)."""
+        import yaml
+        from pathlib import Path
+
+        path = Path("custom_components/bazarr_sync/services.yaml")
+        content = path.read_text(encoding="utf-8")
+
+        # Parse all YAML documents - should be exactly 1
+        docs = list(yaml.safe_load_all(content))
+        assert len(docs) == 1, "services.yaml must contain exactly one YAML document"
+
+        doc = docs[0]
+        assert isinstance(doc, dict), "Root must be a mapping"
+
+    def test_services_yaml_actions_exist(self):
+        """Top-level keys must be the three expected actions."""
+        import yaml
+        from pathlib import Path
+
+        path = Path("custom_components/bazarr_sync/services.yaml")
+        content = path.read_text(encoding="utf-8")
+
+        doc = yaml.safe_load(content)
+        assert set(doc.keys()) == {
+            "search_subtitles",
+            "download_subtitle",
+            "sync_subtitle",
+        }
+
+    def test_services_yaml_no_multi_doc_separator(self):
+        """Ensure no '---' multi-document separator exists."""
+        from pathlib import Path
+
+        path = Path("custom_components/bazarr_sync/services.yaml")
+        content = path.read_text(encoding="utf-8")
+
+        # Should not contain document separator at start of line
+        lines = content.splitlines()
+        doc_separators = [line for line in lines if line.strip() == "---"]
+        assert (
+            len(doc_separators) == 0
+        ), "services.yaml must not contain '---' separators"
+
+    def test_services_yaml_fields_exist(self):
+        """Key fields must exist for each action."""
+        import yaml
+        from pathlib import Path
+
+        path = Path("custom_components/bazarr_sync/services.yaml")
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        # search_subtitles
+        search_fields = doc["search_subtitles"]["fields"]
+        assert "config_entry_id" in search_fields
+        assert "media_type" in search_fields
+        assert "media_id" in search_fields
+        assert "series_id" in search_fields
+
+        # download_subtitle
+        dl_fields = doc["download_subtitle"]["fields"]
+        assert "config_entry_id" in dl_fields
+        assert "media_type" in dl_fields
+        assert "media_id" in dl_fields
+        assert "series_id" in dl_fields
+        assert "provider" in dl_fields
+        assert "subtitle" in dl_fields
+        assert "language" in dl_fields
+        assert "hearing_impaired" in dl_fields
+        assert "forced" in dl_fields
+        assert "original_format" in dl_fields
+
+        # sync_subtitle
+        sync_fields = doc["sync_subtitle"]["fields"]
+        assert "config_entry_id" in sync_fields
+        assert "media_type" in sync_fields
+        assert "media_id" in sync_fields
+        assert "subtitle_id" in sync_fields
+        assert "reference_id" in sync_fields
+        assert "hearing_impaired" in sync_fields
+        assert "forced" in sync_fields
+        assert "original_format" in sync_fields
+        assert "max_offset_seconds" in sync_fields
+        assert "no_fix_framerate" in sync_fields
+        assert "gss" in sync_fields
+        assert "series_id" in sync_fields
+
+    def test_services_yaml_subtitle_id_description_not_path(self):
+        """subtitle_id description must not say 'file path' (opaque ID)."""
+        import yaml
+        from pathlib import Path
+
+        path = Path("custom_components/bazarr_sync/services.yaml")
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        subtitle_id_desc = doc["sync_subtitle"]["fields"]["subtitle_id"]["description"]
+        assert (
+            "path" not in subtitle_id_desc.lower()
+        ), "subtitle_id is opaque ID, not filesystem path"
