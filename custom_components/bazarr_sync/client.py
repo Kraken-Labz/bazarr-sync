@@ -24,15 +24,9 @@ from .const import (
     API_SYSTEM_HEALTH,
     API_SYSTEM_STATUS,
 )
+from .util import generate_external_reference_id
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def generate_external_reference_id(path: str) -> str:
-    """Generate an opaque external reference ID from a filesystem path."""
-    if not path:
-        return ""
-    return hashlib.sha256(path.encode()).hexdigest()[:16]
 
 
 def _generate_correlation_id() -> str:
@@ -484,10 +478,13 @@ class BazarrClient:
         reference_id: str,
         series_id: int | None = None,
     ) -> str | None:
-        """Get the sync reference identifier for a media item by reference_id.
+        """Resolve a sync reference to the value Bazarr expects.
 
-        Validates that the reference_id exists in the sync references for the media.
-        The reference_id is the stream identifier (e.g., 'a:0', 's:0').
+        Validates reference_id against the current sync references for the
+        media and returns the REAL value to send to Bazarr:
+        - audio: 'a:0' -> 'a:0'
+        - embedded: 's:0' -> 's:0'
+        - external: opaque hash -> real filesystem path (server-side only)
         """
         if media_type == "movie":
             result = await self.async_get_movies(radarr_ids=[media_id])
@@ -527,7 +524,7 @@ class BazarrClient:
         for track in sync_result.get("external_subtitles_tracks", []):
             path = track.get("path", "")
             if generate_external_reference_id(path) == reference_id:
-                return reference_id
+                return path
 
         return None
 

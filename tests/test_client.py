@@ -15,8 +15,8 @@ from custom_components.bazarr_sync.client import (
     BazarrNotFoundError,
     BazarrTimeoutError,
     BazarrError,
-    generate_external_reference_id,
 )
+from custom_components.bazarr_sync.util import generate_external_reference_id
 from tests.conftest import MockResponse, make_mock_request, MockRequestContextManager
 
 
@@ -306,6 +306,102 @@ class TestBazarrClient:
         params = kwargs["params"]
         assert params["subtitlesPath"] == "/path/sub.srt"
         assert params["radarrMovieId"] == 1
+
+    async def test_sync_reference_identifier_external_roundtrip(self, hass, client):
+        """External opaque reference_id resolves to the real filesystem path.
+
+        Roundtrip: /internal/example.en.srt -> opaque_hash -> resolver ->
+        /internal/example.en.srt (the value sent to Bazarr).
+        """
+        real_path = "/internal/example.en.srt"
+        opaque_id = generate_external_reference_id(real_path)
+
+        client.async_get_movies = AsyncMock(
+            return_value={"data": [{"subtitles": [{"path": real_path}]}]}
+        )
+        client.async_get_sync_references = AsyncMock(
+            return_value={
+                "audio_tracks": [],
+                "embedded_subtitles_tracks": [],
+                "external_subtitles_tracks": [{"path": real_path, "language": "en"}],
+            }
+        )
+
+        resolved = await client.async_get_sync_reference_identifier(
+            media_type="movie",
+            media_id=1,
+            reference_id=opaque_id,
+        )
+
+        assert resolved == real_path
+
+    async def test_sync_reference_identifier_audio_passthrough(self, hass, client):
+        """Audio reference resolves to its stream identifier."""
+        client.async_get_movies = AsyncMock(
+            return_value={"data": [{"subtitles": [{"path": "/path/sub.srt"}]}]}
+        )
+        client.async_get_sync_references = AsyncMock(
+            return_value={
+                "audio_tracks": [{"stream": "a:0", "language": "en"}],
+                "embedded_subtitles_tracks": [],
+                "external_subtitles_tracks": [],
+            }
+        )
+
+        resolved = await client.async_get_sync_reference_identifier(
+            media_type="movie",
+            media_id=1,
+            reference_id="a:0",
+        )
+
+        assert resolved == "a:0"
+
+    async def test_sync_reference_identifier_embedded_passthrough(self, hass, client):
+        """Embedded subtitle reference resolves to its stream identifier."""
+        client.async_get_movies = AsyncMock(
+            return_value={"data": [{"subtitles": [{"path": "/path/sub.srt"}]}]}
+        )
+        client.async_get_sync_references = AsyncMock(
+            return_value={
+                "audio_tracks": [],
+                "embedded_subtitles_tracks": [{"stream": "s:0", "language": "en"}],
+                "external_subtitles_tracks": [],
+            }
+        )
+
+        resolved = await client.async_get_sync_reference_identifier(
+            media_type="movie",
+            media_id=1,
+            reference_id="s:0",
+        )
+
+        assert resolved == "s:0"
+
+    async def test_sync_reference_identifier_forged_reference_rejected(
+        self, hass, client
+    ):
+        """Forged external reference_id is rejected."""
+        real_path = "/internal/example.en.srt"
+        forged_id = generate_external_reference_id("/internal/other.en.srt")
+
+        client.async_get_movies = AsyncMock(
+            return_value={"data": [{"subtitles": [{"path": real_path}]}]}
+        )
+        client.async_get_sync_references = AsyncMock(
+            return_value={
+                "audio_tracks": [],
+                "embedded_subtitles_tracks": [],
+                "external_subtitles_tracks": [{"path": real_path, "language": "en"}],
+            }
+        )
+
+        resolved = await client.async_get_sync_reference_identifier(
+            media_type="movie",
+            media_id=1,
+            reference_id=forged_id,
+        )
+
+        assert resolved is None
 
     async def test_sync_subtitle(self, hass, client):
         """Test sync subtitle."""

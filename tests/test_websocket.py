@@ -363,6 +363,47 @@ class TestWebSocket:
             result = args[1]
             assert result["success"] is True
             mock_client.async_sync_subtitle.assert_called_once()
+            sync_kwargs = mock_client.async_sync_subtitle.call_args[1]
+            assert sync_kwargs["reference"] == "a:0"
+
+    async def test_ws_sync_subtitle_external_reference_resolves_to_path(
+        self, hass, mock_client, mock_connection
+    ):
+        """External opaque reference_id resolves to the real path sent to Bazarr."""
+        with patch(
+            "custom_components.bazarr_sync.websocket._get_client",
+            return_value=mock_client,
+        ):
+            mock_client.async_get_installed_subtitle_path.return_value = (
+                "/subs/movie.en.srt"
+            )
+            mock_client.async_get_sync_reference_identifier.return_value = (
+                "/internal/example.en.srt"
+            )
+            msg = {
+                "id": 14,
+                "type": WS_TYPE_SYNC_SUBTITLE,
+                "config_entry_id": "test-entry",
+                "media_type": "movie",
+                "media_id": 1,
+                "subtitle_id": "/subs/movie.en.srt",
+                "reference_id": "abc123def4567890",
+            }
+
+            from custom_components.bazarr_sync.websocket import _ws_sync_subtitle
+
+            await _ws_sync_subtitle(hass, mock_connection, msg)
+
+            mock_client.async_get_sync_reference_identifier.assert_called_once_with(
+                media_type="movie",
+                media_id=1,
+                reference_id="abc123def4567890",
+                series_id=None,
+            )
+            mock_connection.send_result.assert_called_once()
+            mock_client.async_sync_subtitle.assert_called_once()
+            sync_kwargs = mock_client.async_sync_subtitle.call_args[1]
+            assert sync_kwargs["reference"] == "/internal/example.en.srt"
 
     async def test_ws_bazarr_error_handling(self, hass, mock_client, mock_connection):
         """Test WebSocket handles BazarrError."""

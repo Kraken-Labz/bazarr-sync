@@ -446,15 +446,16 @@ async def _ws_sync_subtitle(
             )
             return
 
-        # Validate reference_id if provided
+        # Resolve reference_id to the value Bazarr expects (real path for external)
+        resolved_reference = reference_id
         if reference_id is not None:
-            ref_valid = await client.async_get_sync_reference_identifier(
+            resolved_reference = await client.async_get_sync_reference_identifier(
                 media_type=media_type,
                 media_id=media_id,
                 reference_id=reference_id,
                 series_id=series_id,
             )
-            if ref_valid is None:
+            if resolved_reference is None:
                 connection.send_error(
                     msg["id"],
                     "reference_not_found",
@@ -471,7 +472,7 @@ async def _ws_sync_subtitle(
             forced=forced,
             hearing_impaired=hearing_impaired,
             original_format=original_format,
-            reference=reference_id,
+            reference=resolved_reference,
             max_offset_seconds=(
                 str(max_offset_seconds) if max_offset_seconds is not None else None
             ),
