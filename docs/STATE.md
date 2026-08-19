@@ -2,8 +2,8 @@
 
 CURRENT_PHASE: F9
 CURRENT_TASK: Aguardando validação HA-LAB pelo usuário
-STATUS: completed (preparação técnica + repositório GitHub criado + auto-release removido)
-LAST_VALIDATED: FASE 9 preparação técnica completa + repositório GitHub criado + auto-release removido + 67 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean + Hassfest/HACS CI ready
+STATUS: completed (preparação técnica + repositório GitHub criado + external reference roundtrip corrigido)
+LAST_VALIDATED: external reference resolve para path real + helper centralizado em util.py + 73 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
 BLOCKERS: none
 NEXT_ACTION: Usuário instalar Bazarr Sync no HA-LAB via Custom Repository (agora real) e validar
 
@@ -62,11 +62,18 @@ O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-
 ## VALIDAÇÕES AUTOMÁTICAS
 
 ```
-pytest: 67 passed (31 client + 9 models + 13 services + 12 websocket)
+pytest: 73 passed
 Black: clean
 Ruff: all checks pass
-MyPy (--ignore-missing-imports): Success: no issues found in 12 source files
+MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 ```
+
+## BUG EXTERNAL REFERENCE CORRIGIDO (pré-HA-LAB)
+
+- `util.py`: única implementação canônica de `generate_external_reference_id` (client.py e models.py importam dela)
+- `async_get_sync_reference_identifier()` agora retorna o valor REAL enviado ao Bazarr: audio `a:0` -> `a:0`, embedded `s:0` -> `s:0`, external opaque hash -> path real (server-side only)
+- WebSocket e Actions usam `resolved_reference` (retorno do resolver) na chamada `async_sync_subtitle(reference=...)`
+- Testes: roundtrip external (`/internal/example.en.srt` -> hash -> path real), passthrough audio/embedded, forged ID rejeitado, path nunca exposto publicamente
 
 ---
 
