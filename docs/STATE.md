@@ -77,6 +77,15 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 
 ---
 
+## HA-LAB HACS INSTALL ATTEMPT 1
+
+**result:** failed  
+**cause:** invalid `homeassistant` version expression in `hacs.json` (`">=2025.11.0"` not accepted by HACS AwesomeVersion parser)  
+**fix:** `homeassistant: ">=2025.11.0"` -> `"2025.11.0"` (commit 5e0eac1)  
+**next:** usuário repetir download via HACS no HA-LAB
+
+---
+
 ## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB
 
 **Ação requerida pelo usuário (agora via HACS Custom Repository real):**
