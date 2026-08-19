@@ -32,7 +32,7 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 | Item | Status |
 |------|--------|
 | `manifest.json` | domain `bazarr_sync`, version `0.1.0-beta.1`, codeowners `@phgsbr`, docs próprio |
-| `hacs.json` | `homeassistant: ">=2025.11.0"` |
+| `hacs.json` | `homeassistant: "2025.11.0"` |
 | `icon.png` | 256x256 RGBA criado |
 | `README.md` | Instruções de instalação via HACS Custom Repository (repo real) |
 | `CHANGELOG.md` | Atualizado com todas as mudanças F0–F9 |
