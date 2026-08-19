@@ -1,9 +1,9 @@
 # STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
-CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (services.yaml corrigido)
-STATUS: HA-LAB installation success; services.yaml structure fixed
-LAST_VALIDATED: HA-LAB install OK + entities + actions + Bazarr connection; services.yaml single-doc + 78 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
+CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (service handlers corrigidos)
+STATUS: HA-LAB installation success; services.yaml fixed; service handlers fixed
+LAST_VALIDATED: HA-LAB install OK + entities + actions + Bazarr connection; services.yaml single-doc + service handlers bind + 81 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
 BLOCKERS: none
 NEXT_ACTION: Usuário atualizar Bazarr Sync no HA-LAB via HACS e reiniciar/recarregar
 
@@ -62,7 +62,7 @@ O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-
 ## VALIDAÇÕES AUTOMÁTICAS
 
 ```
-pytest: 78 passed (73 + 5 services.yaml structure)
+pytest: 81 passed (78 + 3 registration contract)
 Black: clean
 Ruff: all checks pass
 MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
@@ -99,6 +99,18 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 **fix:** single-document mapping keyed by action names (commit af42d62)  
 **tests added:** 5 tests for services.yaml structure (single doc, actions, no separators, fields, opaque ID desc)  
 **next:** usuário atualizar via HACS no HA-LAB e reiniciar/recarregar
+
+---
+
+## HA-LAB SEARCH ACTION ATTEMPT 1
+
+**result:** failed  
+**cause:** service handlers registered with incompatible `(hass, call)` signature  
+**impact:** all three Actions affected (search_subtitles, download_subtitle, sync_subtitle)  
+**fix:** bind `hass` using `functools.partial` before `async_register` (commit 66f54ec)  
+**tests added:** 3 registration contract tests (call handler with just `call`)  
+**type ignores removed:** 3 from async_register calls  
+**next:** usuário atualizar via HACS no HA-LAB, reiniciar/recarregar, testar SOMENTE search_subtitles
 
 ---
 
