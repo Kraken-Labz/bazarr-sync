@@ -19,6 +19,24 @@ class MediaReference:
     path: str = ""
 
 
+def _normalize_bool(value: Any) -> bool:
+    """Normalize various boolean representations to bool."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() == "true"
+    return bool(value)
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    """Normalize optional string: None/empty string -> None."""
+    if value is None:
+        return None
+    if isinstance(value, str) and value == "":
+        return None
+    return str(value)
+
+
 @dataclass
 class SubtitleCandidate:
     """Subtitle candidate from manual search."""
@@ -33,8 +51,8 @@ class SubtitleCandidate:
     uploader: str = ""
     hearing_impaired: bool = False
     forced: bool = False
-    original_format: str = ""
-    url: str = ""
+    original_format: bool = False
+    url: str | None = None
 
     @classmethod
     def from_bazarr(cls, data: dict[str, Any]) -> SubtitleCandidate:
@@ -48,10 +66,10 @@ class SubtitleCandidate:
             dont_matches=data.get("dont_matches", []),
             release_info=data.get("release_info", []),
             uploader=data.get("uploader", ""),
-            hearing_impaired=data.get("hearing_impaired", "False") == "True",
-            forced=data.get("forced", "False") == "True",
-            original_format=data.get("original_format", ""),
-            url=data.get("url", ""),
+            hearing_impaired=_normalize_bool(data.get("hearing_impaired", "False")),
+            forced=_normalize_bool(data.get("forced", "False")),
+            original_format=_normalize_bool(data.get("original_format", "False")),
+            url=_normalize_optional_str(data.get("url")),
         )
 
     def as_dict(self) -> dict[str, Any]:

@@ -38,7 +38,7 @@ class TestSubtitleCandidate:
             "uploader": "user1",
             "hearing_impaired": "True",
             "forced": "False",
-            "original_format": "srt",
+            "original_format": "True",
             "url": "http://example.com",
         }
         candidate = SubtitleCandidate.from_bazarr(data)
@@ -52,7 +52,7 @@ class TestSubtitleCandidate:
         assert candidate.uploader == "user1"
         assert candidate.hearing_impaired is True
         assert candidate.forced is False
-        assert candidate.original_format == "srt"
+        assert candidate.original_format is True
         assert candidate.url == "http://example.com"
 
     def test_from_bazarr_false_strings(self):
@@ -60,10 +60,39 @@ class TestSubtitleCandidate:
         data = {
             "hearing_impaired": "False",
             "forced": "True",
+            "original_format": "False",
         }
         candidate = SubtitleCandidate.from_bazarr(data)
         assert candidate.hearing_impaired is False
         assert candidate.forced is True
+        assert candidate.original_format is False
+
+    def test_from_bazarr_original_format_normalization(self):
+        """Test original_format normalized from various inputs."""
+        for val, expected in [
+            ("True", True),
+            ("true", True),
+            ("False", False),
+            ("false", False),
+            (True, True),
+            (False, False),
+            ("", False),
+            ("srt", False),  # unrecognized string -> False
+        ]:
+            data = {"original_format": val}
+            candidate = SubtitleCandidate.from_bazarr(data)
+            assert candidate.original_format is expected, f"Failed for {val!r}"
+
+    def test_from_bazarr_url_optional(self):
+        """Test url field handles None/empty/missing."""
+        for val, expected in [
+            ("http://example.com", "http://example.com"),
+            ("", None),
+            (None, None),
+        ]:
+            data = {"url": val} if val is not None else {}
+            candidate = SubtitleCandidate.from_bazarr(data)
+            assert candidate.url is expected, f"Failed for {val!r}"
 
     def test_as_dict(self):
         """Test converting to dictionary."""
@@ -78,6 +107,8 @@ class TestSubtitleCandidate:
         assert d["subtitle_id"] == "sub123"
         assert d["language"] == "en"
         assert d["score"] == 95
+        assert d["original_format"] is False
+        assert d["url"] is None
 
 
 class TestInstalledSubtitle:
