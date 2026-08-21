@@ -10,14 +10,14 @@ import pytest
 from aiohttp import ClientResponseError
 
 from custom_components.bazarr_sync.client import (
-    BazarrClient,
     BazarrAuthError,
+    BazarrClient,
+    BazarrError,
     BazarrNotFoundError,
     BazarrTimeoutError,
-    BazarrError,
 )
 from custom_components.bazarr_sync.util import generate_external_reference_id
-from tests.conftest import MockResponse, make_mock_request, MockRequestContextManager
+from tests.conftest import MockRequestContextManager, MockResponse, make_mock_request
 
 
 @pytest.fixture
@@ -95,7 +95,6 @@ class TestBazarrClient:
 
     async def test_request_timeout(self, hass, client):
         """Test timeout raises BazarrTimeoutError."""
-        tracker = make_mock_request(MockResponse(200))
 
         def mock_request(*args, **kwargs):
             raise asyncio.TimeoutError()
@@ -171,7 +170,7 @@ class TestBazarrClient:
         client._session.request = tracker
 
         await client.async_get_movies(start=10, length=20, radarr_ids=[1, 2])
-        args, kwargs = tracker.call_args
+        _, kwargs = tracker.call_args
         assert kwargs["params"]["start"] == 10
         assert kwargs["params"]["length"] == 20
         assert kwargs["params"]["radarrid[]"] == [1, 2]
@@ -297,12 +296,12 @@ class TestBazarrClient:
         tracker = make_mock_request(mock_response)
         client._session.request = tracker
 
-        result = await client.async_get_sync_references(
+        await client.async_get_sync_references(
             subtitles_path="/path/sub.srt",
             radarr_movie_id=1,
         )
 
-        args, kwargs = tracker.call_args
+        _, kwargs = tracker.call_args
         params = kwargs["params"]
         assert params["subtitlesPath"] == "/path/sub.srt"
         assert params["radarrMovieId"] == 1
@@ -680,7 +679,7 @@ class TestBazarrClient:
     async def test_external_reference_id_generation(self, hass):
         """Test that external reference ID generation is deterministic."""
         path = "/subs/movie.en.srt"
-        expected_opaque_id = generate_external_reference_id(path)
+        _ = generate_external_reference_id(path)
 
         # Test that the ID is deterministic
         id1 = generate_external_reference_id(path)

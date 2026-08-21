@@ -10,8 +10,8 @@ from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.bazarr_sync.client import BazarrClient, BazarrError
 from custom_components.bazarr_sync.services import (
-    async_search_subtitles,
     async_download_subtitle,
+    async_search_subtitles,
     async_sync_subtitle,
 )
 
@@ -433,8 +433,9 @@ class TestServicesYAML:
 
     def test_services_yaml_single_document(self):
         """services.yaml must be a single YAML document (no --- separators)."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         path = Path("custom_components/bazarr_sync/services.yaml")
         content = path.read_text(encoding="utf-8")
@@ -448,8 +449,9 @@ class TestServicesYAML:
 
     def test_services_yaml_actions_exist(self):
         """Top-level keys must be the three expected actions."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         path = Path("custom_components/bazarr_sync/services.yaml")
         content = path.read_text(encoding="utf-8")
@@ -477,8 +479,9 @@ class TestServicesYAML:
 
     def test_services_yaml_fields_exist(self):
         """Key fields must exist for each action."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         path = Path("custom_components/bazarr_sync/services.yaml")
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -520,8 +523,9 @@ class TestServicesYAML:
 
     def test_services_yaml_subtitle_id_description_not_path(self):
         """subtitle_id description must not say 'file path' (opaque ID)."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         path = Path("custom_components/bazarr_sync/services.yaml")
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -550,8 +554,8 @@ class TestServiceRegistration:
         self, hass, mock_entry, mock_client
     ):
         """search_subtitles handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.const import ACTION_SEARCH_SUBTITLES
         from custom_components.bazarr_sync.services import _register_services
-        from custom_components.bazarr_sync.const import DOMAIN, ACTION_SEARCH_SUBTITLES
 
         with patch(
             "custom_components.bazarr_sync.services._get_coordinator",
@@ -564,7 +568,7 @@ class TestServiceRegistration:
             register_calls = hass.services.async_register.call_args_list
             search_handler = None
             for call_args in register_calls:
-                args, kwargs = call_args
+                args, _ = call_args
                 if args[1] == ACTION_SEARCH_SUBTITLES:
                     search_handler = args[2]
                     break
@@ -590,8 +594,8 @@ class TestServiceRegistration:
         self, hass, mock_entry, mock_client
     ):
         """download_subtitle handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.const import ACTION_DOWNLOAD_SUBTITLE
         from custom_components.bazarr_sync.services import _register_services
-        from custom_components.bazarr_sync.const import DOMAIN, ACTION_DOWNLOAD_SUBTITLE
 
         with patch(
             "custom_components.bazarr_sync.services._get_coordinator",
@@ -602,7 +606,7 @@ class TestServiceRegistration:
             register_calls = hass.services.async_register.call_args_list
             download_handler = None
             for call_args in register_calls:
-                args, kwargs = call_args
+                args, _ = call_args
                 if args[1] == ACTION_DOWNLOAD_SUBTITLE:
                     download_handler = args[2]
                     break
@@ -626,8 +630,8 @@ class TestServiceRegistration:
 
     async def test_sync_subtitle_handler_signature(self, hass, mock_entry, mock_client):
         """sync_subtitle handler must accept (call) not (hass, call)."""
+        from custom_components.bazarr_sync.const import ACTION_SYNC_SUBTITLE
         from custom_components.bazarr_sync.services import _register_services
-        from custom_components.bazarr_sync.const import DOMAIN, ACTION_SYNC_SUBTITLE
 
         with patch(
             "custom_components.bazarr_sync.services._get_coordinator",
@@ -638,7 +642,7 @@ class TestServiceRegistration:
             register_calls = hass.services.async_register.call_args_list
             sync_handler = None
             for call_args in register_calls:
-                args, kwargs = call_args
+                args, _ = call_args
                 if args[1] == ACTION_SYNC_SUBTITLE:
                     sync_handler = args[2]
                     break
