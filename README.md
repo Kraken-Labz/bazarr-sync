@@ -1,6 +1,11 @@
 # Bazarr Sync — Home Assistant Integration
 
+![Bazarr Sync Banner](brand/bazarr-sync-readme-banner-1200.png)
+
 Custom Home Assistant integration for [Bazarr](https://www.bazarr.media/) that provides secure subtitle search, download, and synchronization via HA Actions and WebSocket API.
+
+**Publisher**: Kraken Labs  
+**Tagline**: Subtitle control for Home Assistant
 
 ## Features
 
