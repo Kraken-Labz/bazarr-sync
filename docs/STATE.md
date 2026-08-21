@@ -1,11 +1,11 @@
 # STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
-CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (search action passou; normalização original_format/url)
-STATUS: HA-LAB search_subtitles passed; original_format boolean + url optional normalized
-LAST_VALIDATED: HA-LAB search OK (2 pt-BR candidates); original_format bool + url optional; 83 testes + mypy + ruff + black
+CURRENT_TASK: HA-LAB validation (user actions pending: HACS update → reload/restart → read-only tests)
+STATUS: Integration loaded in HA-LAB (entities active); awaiting user HACS update to commit 5d4c411
+LAST_VALIDATED: HA-LAB entities present (wanted_movies=17, wanted_episodes=296, health=OK); 83 tests + mypy + ruff + black
 BLOCKERS: none
-NEXT_ACTION: Usuário atualizar Bazarr Sync no HA-LAB via HACS e testar download/sync
+NEXT_ACTION: User: update via HACS → reload/restart → validate read-only ops (search_subtitles, WS get_media/get_subtitles/search_subtitles/get_sync_references, schemas, secrets, logs)
 
 ---
 
@@ -137,9 +137,11 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 
 ## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB (F9 — NON-MUTATING)
 
-**Ação requerida (autônoma + usuário):**
+**Estado atual:** Integração já instalada e funcional no HA-LAB (entidades ativas: wanted_movies=17, wanted_episodes=296, health=OK).
 
-1. Atualizar "Bazarr Sync" via HACS no HA-LAB → commit 23a751c
+**Ações requeridas pelo usuário:**
+
+1. Atualizar "Bazarr Sync" via HACS no HA-LAB → commit 5d4c411 (latest)
 2. Reiniciar/recarregar Home Assistant (reload + restart completo)
 3. Validar **apenas operações read-only**:
 
@@ -149,7 +151,7 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 | Reload ConfigEntry | Persiste e carrega corretamente |
 | Restart HA-LAB | Integração carrega sem erros |
 | Entities | Sensors (wanted_movies, wanted_episodes) + binary_sensor (health) + availability |
-| Action search_subtitles | Retorna `original_format: bool`, `url: string | null` |
+| Action search_subtitles | Retorna `original_format: bool`, `url: string \| null` |
 | WebSocket read-only | 4 comandos: `get_media`, `get_subtitles`, `search_subtitles`, `get_sync_references` |
 | Multi ConfigEntry | Schemas validados (testes automatizados); segunda instância se disponível |
 | Path Security | Respostas públicas não expõem `path`; usam `subtitle_id`/`reference_id` opacos |
