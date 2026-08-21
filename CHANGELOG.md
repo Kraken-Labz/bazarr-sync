@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.1.0-beta.1] - 2026-08-21
 
 ### Added
 - BazarrClient: classe separada para toda comunicação HTTP com Bazarr
@@ -34,6 +34,11 @@ All notable changes to this project will be documented in this file.
   - Novos métodos: `async_get_installed_subtitle_path()`, `async_get_sync_reference_identifier()`
   - Testes negativos: path arbitrário, forged IDs, cross-media IDs rejeitados
 - **Action Response**: `search_subtitles` usa `SupportsResponse.ONLY`
+- **Brand Kit**: Identidade visual Kraken Labs aprovada e incorporada
+  - Master source de alta resolução (1254×1254)
+  - Master transparente canônico com alpha corrigido
+  - Derivados 512/256/128/64 por downscale Lanczos
+  - README banner + GitHub social card
 
 ### Fixed
 - `config_flow.py`: corrigido bug `isinstance` que impedia detectar 401 corretamente
@@ -47,3 +52,18 @@ All notable changes to this project will be documented in this file.
 
 ### Based on
 - Upstream: owenvoke/hass-bazarr @ 65c27a3 (v1.2.3, MIT License)
+
+### Validation
+- 83 unit tests passing
+- MyPy strict clean
+- Ruff clean
+- Black clean
+- Hassfest passed
+- HACS Action passed
+- HA-LAB search_subtitles validated against real Bazarr instance
+
+## [Unreleased]
+
+### Planned
+- HA-LAB beta validation (upgrade/reinstall/remove, multi-ConfigEntry)
+- Jellyfin Bazarr Sync Plugin (Project B)

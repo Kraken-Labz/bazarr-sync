@@ -1,11 +1,11 @@
 # STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
-CURRENT_TASK: HA-LAB validation complete (all read-only gates passed)
-STATUS: HA_LAB_SEARCH_NORMALIZATION: passed (original_format: bool, url: string | null confirmed in real HA-LAB); all remaining F9 read-only gates validated via code review + unit tests
-LAST_VALIDATED: Entities active (wanted_movies=17, wanted_episodes=296, health=OK); 83 tests + mypy + ruff + black + HACS + Hassfest CI
+CURRENT_TASK: Beta v0.1.0-beta.1 published
+STATUS: PUBLIC_RELEASE: v0.1.0-beta.1 | RELEASE_TYPE: prerelease | HACS_CUSTOM_REPOSITORY: validated | BETA_STATUS: published
+LAST_VALIDATED: Tag v0.1.0-beta.1 created at 7353387; GitHub Release published as pre-release; HACS Custom Repository detects beta
 BLOCKERS: none
-NEXT_ACTION: Produce final F9 report; await READY_FOR_BETA_RELEASE checkpoint
+NEXT_ACTION: Await BETA_VALIDATED checkpoint (human validation of HACS beta install/update)
 
 ---
 
@@ -46,8 +46,9 @@ Fases 0–9 preparação técnica concluídas com gates validados:
 
 ```
 GITHUB_REPOSITORY: created (https://github.com/Kraken-Labz/bazarr-sync)
-PUBLIC_RELEASE: none
-HACS_CUSTOM_REPOSITORY_TEST: ready (repo real disponível)
+PUBLIC_RELEASE: v0.1.0-beta.1 (prerelease)
+RELEASE_URL: https://github.com/Kraken-Labz/bazarr-sync/releases/tag/v0.1.0-beta.1
+HACS_CUSTOM_REPOSITORY_TEST: validated (beta detected)
 GITHUB_OWNER: Kraken-Labz
 REPOSITORY_NAME: bazarr-sync
 GITHUB_URL: https://github.com/Kraken-Labz/bazarr-sync
@@ -165,6 +166,25 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 ## PRÓXIMO: PROJETO B
 
 Após validação HA-LAB verde → Projeto B (Jellyfin Bazarr Sync Plugin - .NET).
+
+---
+
+## PUBLIC_RELEASE: v0.1.0-beta.1
+
+| Item | Status |
+|------|--------|
+| TAG | v0.1.0-beta.1 |
+| TAG_COMMIT | 7353387 (brand: complete approved pre-release assets) |
+| GITHUB_RELEASE | ✅ Created |
+| RELEASE_TYPE | prerelease |
+| RELEASE_URL | https://github.com/Kraken-Labz/bazarr-sync/releases/tag/v0.1.0-beta.1 |
+| HACS_REPOSITORY_DETECTED | ✅ |
+| HACS_BETA_VISIBLE | ✅ (pre-release visible in HACS custom repo) |
+| HACS_BETA_INSTALL_OR_UPDATE | Pending validation in HA-LAB |
+| HA_LAB_AFTER_BETA | Pending validation |
+| ENTITIES | Expected: wanted_movies=17, wanted_episodes=296, health=OK |
+| SEARCH_ACTION | Expected: functional (read-only validated) |
+| LOGS | Expected: clean |
 
 ---
 
