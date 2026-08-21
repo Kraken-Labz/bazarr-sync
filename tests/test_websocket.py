@@ -10,7 +10,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.bazarr_sync.client import BazarrClient, BazarrError
-from custom_components.bazarr_sync.websocket import async_register_websocket_commands
 from custom_components.bazarr_sync.const import (
     WS_TYPE_DOWNLOAD_SUBTITLE,
     WS_TYPE_GET_MEDIA,

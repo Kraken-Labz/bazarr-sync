@@ -9,10 +9,6 @@ from aiohttp import ClientResponseError
 
 from custom_components.bazarr_sync.client import (
     BazarrClient,
-    BazarrAuthError,
-    BazarrNotFoundError,
-    BazarrTimeoutError,
-    BazarrError,
 )
 
 
@@ -110,11 +106,11 @@ def make_mock_request(response: MockResponse) -> MockRequestTracker:
 
 # Re-export for convenience
 __all__ = [
+    "MockResponse",
+    "bazarr_client",
+    "make_mock_request",
     "mock_hass",
     "mock_session",
-    "bazarr_client",
-    "MockResponse",
-    "make_mock_request",
     "patch",
     "pytest",
 ]
