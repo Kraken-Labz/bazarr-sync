@@ -135,29 +135,30 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 
 ---
 
-## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB
+## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB (F9 — NON-MUTATING)
 
-**Ação requerida pelo usuário (agora via HACS Custom Repository real):**
+**Ação requerida (autônoma + usuário):**
 
-1. Atualizar "Bazarr Sync" via HACS no HA-LAB
-2. Reiniciar/recarregar Home Assistant
-3. Testar `bazarr_sync.download_subtitle` e `bazarr_sync.sync_subtitle`
-4. Validar os seguintes pontos restantes:
+1. Atualizar "Bazarr Sync" via HACS no HA-LAB → commit 23a751c
+2. Reiniciar/recarregar Home Assistant (reload + restart completo)
+3. Validar **apenas operações read-only**:
 
 | Check | Descrição |
 |-------|-----------|
 | Config Flow | Abre normalmente, aceita URL/API key, cria ConfigEntry LOADED |
-| Reload/Restart | ConfigEntry persiste e carrega corretamente |
-| Entities | Sensors (wanted_movies, wanted_episodes) + binary_sensor (health) |
-| Actions | `bazarr_sync.search_subtitles` ✅, `download_subtitle`, `sync_subtitle` |
-| WebSocket | 6 comandos sob namespace `bazarr_sync/*` |
-| Multi ConfigEntry | Múltiplas instâncias funcionam independentemente |
-| Path Security | `subtitle_id`/`reference_id` resolvidos server-side; paths arbitrários rejeitados |
+| Reload ConfigEntry | Persiste e carrega corretamente |
+| Restart HA-LAB | Integração carrega sem erros |
+| Entities | Sensors (wanted_movies, wanted_episodes) + binary_sensor (health) + availability |
+| Action search_subtitles | Retorna `original_format: bool`, `url: string | null` |
+| WebSocket read-only | 4 comandos: `get_media`, `get_subtitles`, `search_subtitles`, `get_sync_references` |
+| Multi ConfigEntry | Schemas validados (testes automatizados); segunda instância se disponível |
+| Path Security | Respostas públicas não expõem `path`; usam `subtitle_id`/`reference_id` opacos |
 | Secrets | API key não aparece em logs/responses; `X-API-KEY` só no backend |
 | Logs | Sem tracebacks, sem warnings recorrentes, sem segredos |
+| Schemas mutáveis | `download_subtitle`, `sync_subtitle` validados via registro de contrato (testes) — **sem execução** |
 
-**Permitido:** leitura, busca de candidatos, operações read-only  
-**Proibido:** download/sync/delete/modificação em mídia de produção
+**Permitido:** leitura, busca, reload, restart, validação de schemas read-only  
+**Proibido:** download/sync/delete/modificação em mídia de produção (F6/F7 já validaram)
 
 ---
 
