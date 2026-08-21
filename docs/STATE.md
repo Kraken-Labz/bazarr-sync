@@ -1,11 +1,11 @@
 # STATE.md — Bazarr Sync (HA)
 
 CURRENT_PHASE: F9
-CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (service handlers corrigidos)
-STATUS: HA-LAB installation success; services.yaml fixed; service handlers fixed
-LAST_VALIDATED: HA-LAB install OK + entities + actions + Bazarr connection; services.yaml single-doc + service handlers bind + 81 testes unitários passando + mypy project-wide clean + Ruff clean + Black clean
+CURRENT_TASK: Aguardando validação HA-LAB pelo usuário (search action passou; normalização original_format/url)
+STATUS: HA-LAB search_subtitles passed; original_format boolean + url optional normalized
+LAST_VALIDATED: HA-LAB search OK (2 pt-BR candidates); original_format bool + url optional; 83 testes + mypy + ruff + black
 BLOCKERS: none
-NEXT_ACTION: Usuário atualizar Bazarr Sync no HA-LAB via HACS e reiniciar/recarregar
+NEXT_ACTION: Usuário atualizar Bazarr Sync no HA-LAB via HACS e testar download/sync
 
 ---
 
@@ -62,7 +62,7 @@ O repositório público **foi criado** em https://github.com/Kraken-Labz/bazarr-
 ## VALIDAÇÕES AUTOMÁTICAS
 
 ```
-pytest: 81 passed (78 + 3 registration contract)
+pytest: 83 passed (81 + 2 original_format/url normalization)
 Black: clean
 Ruff: all checks pass
 MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
@@ -114,24 +114,42 @@ MyPy (--ignore-missing-imports): Success: no issues found in 13 source files
 
 ---
 
+## HA-LAB SEARCH ACTION ATTEMPT 2
+
+**result:** passed  
+**action:** `bazarr_sync.search_subtitles`  
+**params:** media_type=movie, media_id=244  
+**response:** 2 candidates pt-BR (opensubtitlescom, scores 91/74)  
+**validation:** Action registered, config_entry_id works, handler works, HA→Bazarr comms works, response data works
+
+---
+
+## NORMALIZAÇÃO original_format/url
+
+**result:** fixed  
+**issue:** Bazarr returns `original_format: "False"` (string), public API should return boolean  
+**fix:** `_normalize_bool()` + `_normalize_optional_str()` in models.py  
+**contract:** `original_format: bool`, `url: str | None`  
+**tests:** 4 new cases (True/False/string/None normalization)  
+**tests total:** 83 passed
+
+---
+
 ## PRÓXIMO PASSO: VALIDAÇÃO HA-LAB
 
 **Ação requerida pelo usuário (agora via HACS Custom Repository real):**
 
-1. Adicionar este repositório como Custom Repository no HACS (category: Integration)
-   - URL: `https://github.com/Kraken-Labz/bazarr-sync`
-2. Instalar "Bazarr Sync" via HACS
-3. Reiniciar Home Assistant
-4. Adicionar integração "Bazarr Sync" via Settings → Devices & Services
-4. Configurar URL e API Key do Bazarr
-5. Validar os seguintes pontos:
+1. Atualizar "Bazarr Sync" via HACS no HA-LAB
+2. Reiniciar/recarregar Home Assistant
+3. Testar `bazarr_sync.download_subtitle` e `bazarr_sync.sync_subtitle`
+4. Validar os seguintes pontos restantes:
 
 | Check | Descrição |
 |-------|-----------|
 | Config Flow | Abre normalmente, aceita URL/API key, cria ConfigEntry LOADED |
 | Reload/Restart | ConfigEntry persiste e carrega corretamente |
 | Entities | Sensors (wanted_movies, wanted_episodes) + binary_sensor (health) |
-| Actions | `bazarr_sync.search_subtitles` (response data), `download_subtitle`, `sync_subtitle` |
+| Actions | `bazarr_sync.search_subtitles` ✅, `download_subtitle`, `sync_subtitle` |
 | WebSocket | 6 comandos sob namespace `bazarr_sync/*` |
 | Multi ConfigEntry | Múltiplas instâncias funcionam independentemente |
 | Path Security | `subtitle_id`/`reference_id` resolvidos server-side; paths arbitrários rejeitados |
