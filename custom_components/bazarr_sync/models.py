@@ -191,3 +191,36 @@ class SyncReferences:
                 for t in data.get("external_subtitles_tracks", [])
             ],
         )
+
+
+@dataclass
+class ResolvedMedia:
+    """Resolved media with both human and technical identifiers."""
+
+    media_type: str  # "movie" or "episode"
+    title: str
+    year: int | None = None
+    season: int | None = None
+    episode: int | None = None
+    episode_title: str | None = None
+    media_id: int = 0  # radarrId or sonarrEpisodeId
+    series_id: int | None = None  # sonarrSeriesId for episodes
+
+    def as_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API responses."""
+        result = {
+            "media_type": self.media_type,
+            "title": self.title,
+            "media_id": self.media_id,
+        }
+        if self.year is not None:
+            result["year"] = self.year
+        if self.series_id is not None:
+            result["series_id"] = self.series_id
+        if self.season is not None:
+            result["season"] = self.season
+        if self.episode is not None:
+            result["episode"] = self.episode
+        if self.episode_title is not None:
+            result["episode_title"] = self.episode_title
+        return result

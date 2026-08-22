@@ -1,6 +1,228 @@
+find_subtitles:
+  name: "Find Subtitles"
+  description: "Search for available subtitles for a movie or episode using human-readable identifiers"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    media_type:
+      name: Media Type
+      description: Type of media (movie or episode)
+      required: true
+      selector:
+        select:
+          options:
+            - movie
+            - episode
+    title:
+      name: Title
+      description: Movie title, or series title when Media Type is Episode
+      required: true
+      selector:
+        text:
+    year:
+      name: Year
+      description: Movie or series year. Use it when multiple titles have the same name.
+      required: false
+      selector:
+        number:
+          min: 1900
+          max: 2100
+    season:
+      name: Season
+      description: Season number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+    episode:
+      name: Episode
+      description: Episode number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+
+download_best_subtitle:
+  name: "Download Best Subtitle"
+  description: "Download the best matching subtitle for a movie or episode"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    media_type:
+      name: Media Type
+      description: Type of media (movie or episode)
+      required: true
+      selector:
+        select:
+          options:
+            - movie
+            - episode
+    title:
+      name: Title
+      description: Movie title, or series title when Media Type is Episode
+      required: true
+      selector:
+        text:
+    year:
+      name: Year
+      description: Movie or series year. Use it when multiple titles have the same name.
+      required: false
+      selector:
+        number:
+          min: 1900
+          max: 2100
+    season:
+      name: Season
+      description: Season number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+    episode:
+      name: Episode
+      description: Episode number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+    language:
+      name: Language
+      description: Language code (e.g., en, pt-BR)
+      required: true
+      selector:
+        text:
+    hearing_impaired:
+      name: Hearing Impaired
+      description: Whether subtitle is for hearing impaired
+      required: false
+      default: false
+      selector:
+        boolean:
+    forced:
+      name: Forced
+      description: Whether subtitle is forced
+      required: false
+      default: false
+      selector:
+        boolean:
+    original_format:
+      name: Original Format
+      description: Keep original subtitle format
+      required: false
+      default: false
+      selector:
+        boolean:
+
+sync_subtitle_auto:
+  name: "Sync Subtitle Automatically"
+  description: "Synchronize an installed subtitle against a reference track automatically"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    media_type:
+      name: Media Type
+      description: Type of media (movie or episode)
+      required: true
+      selector:
+        select:
+          options:
+            - movie
+            - episode
+    title:
+      name: Title
+      description: Movie title, or series title when Media Type is Episode
+      required: true
+      selector:
+        text:
+    year:
+      name: Year
+      description: Movie or series year. Use it when multiple titles have the same name.
+      required: false
+      selector:
+        number:
+          min: 1900
+          max: 2100
+    season:
+      name: Season
+      description: Season number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+    episode:
+      name: Episode
+      description: Episode number (required for episodes)
+      required: false
+      selector:
+        number:
+          min: 1
+    subtitle_language:
+      name: Subtitle Language
+      description: Language of the installed subtitle to sync (e.g., en, pt-BR)
+      required: true
+      selector:
+        text:
+    hearing_impaired:
+      name: Hearing Impaired
+      description: Whether subtitle is for hearing impaired
+      required: false
+      default: false
+      selector:
+        boolean:
+    forced:
+      name: Forced
+      description: Whether subtitle is forced
+      required: false
+      default: false
+      selector:
+        boolean:
+    original_format:
+      name: Original Format
+      description: Keep original subtitle format
+      required: false
+      default: false
+      selector:
+        boolean:
+    max_offset_seconds:
+      name: Max Offset Seconds
+      description: Maximum offset allowed
+      required: false
+      selector:
+        number:
+          min: 0
+    no_fix_framerate:
+      name: No Fix Framerate
+      description: Don't try to fix framerate
+      required: false
+      default: false
+      selector:
+        boolean:
+    gss:
+      name: Golden Section Search
+      description: Use Golden Section Search algorithm
+      required: false
+      default: false
+      selector:
+        boolean:
+
 search_subtitles:
-  name: "Search Subtitles"
-  description: "Search for available subtitles for a movie or episode"
+  name: "Search Subtitles (Advanced / API)"
+  description: "Search for available subtitles for a movie or episode using internal IDs"
   fields:
     config_entry_id:
       name: Config Entry
@@ -34,8 +256,8 @@ search_subtitles:
           min: 1
 
 download_subtitle:
-  name: "Download Subtitle"
-  description: "Download a specific subtitle found in search"
+  name: "Download Subtitle (Advanced / API)"
+  description: "Download a specific subtitle found in search using internal IDs"
   fields:
     config_entry_id:
       name: Config Entry
@@ -108,8 +330,8 @@ download_subtitle:
         boolean:
 
 sync_subtitle:
-  name: "Sync Subtitle"
-  description: "Synchronize a subtitle against a reference track"
+  name: "Sync Subtitle (Advanced / API)"
+  description: "Synchronize a subtitle against a reference track using internal IDs"
   fields:
     config_entry_id:
       name: Config Entry

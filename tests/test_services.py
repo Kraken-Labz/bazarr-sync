@@ -448,7 +448,7 @@ class TestServicesYAML:
         assert isinstance(doc, dict), "Root must be a mapping"
 
     def test_services_yaml_actions_exist(self):
-        """Top-level keys must be the three expected actions."""
+        """Top-level keys must be the six expected actions (3 human-friendly + 3 advanced)."""
         from pathlib import Path
 
         import yaml
@@ -458,6 +458,9 @@ class TestServicesYAML:
 
         doc = yaml.safe_load(content)
         assert set(doc.keys()) == {
+            "find_subtitles",
+            "download_best_subtitle",
+            "sync_subtitle_auto",
             "search_subtitles",
             "download_subtitle",
             "sync_subtitle",

@@ -10,7 +10,8 @@ Custom Home Assistant integration for [Bazarr](https://www.bazarr.media/) that p
 ## Features
 
 - **Sensors**: Wanted movies, wanted episodes, health issues (from upstream)
-- **Actions**: Search subtitles, download a specific subtitle, sync subtitles
+- **Easy Actions**: Find subtitles, download best subtitle, sync subtitle automatically (human-friendly)
+- **Advanced Actions**: Search subtitles, download a specific subtitle, sync subtitles (ID-based)
 - **WebSocket API**: Secure interface for custom frontend cards (e.g. Octopus Media Card)
 - **Security**: API key never exposed to frontend; filesystem paths resolved server-side
 
@@ -25,8 +26,8 @@ Custom Home Assistant integration for [Bazarr](https://www.bazarr.media/) that p
 5. Click **Add**
 6. Search for **Bazarr Sync** in HACS and install
 7. Restart Home Assistant
-7. Add the integration via **Settings → Devices & Services → Add Integration → Bazarr Sync**
-8. Provide your Bazarr URL and API key
+8. Add the integration via **Settings → Devices & Services → Add Integration → Bazarr Sync**
+9. Provide your Bazarr URL and API key
 
 ### Manual Installation
 
@@ -43,11 +44,75 @@ Custom Home Assistant integration for [Bazarr](https://www.bazarr.media/) that p
 
 The integration creates a **Config Entry** that is used to identify which Bazarr instance to use when multiple are configured.
 
-## Actions
+## Easy / Human-friendly Actions
+
+These actions use human-readable identifiers (movie/series titles, season/episode numbers) instead of internal IDs. They are recommended for manual use and simple automations.
 
 All actions require `config_entry_id` to identify the target Bazarr instance.
 
-### `bazarr_sync.search_subtitles`
+### `bazarr_sync.find_subtitles`
+
+Search for available subtitles for a movie or episode using human-readable identifiers.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config_entry_id` | string | Yes | Config Entry ID of the Bazarr Sync instance |
+| `media_type` | `movie` \| `episode` | Yes | Media type |
+| `title` | string | Yes | Movie title, or series title when Media Type is Episode |
+| `year` | integer | No | Movie or series year. Use it when multiple titles have the same name. |
+| `season` | integer | No | Season number (required for episodes) |
+| `episode` | integer | No | Episode number (required for episodes) |
+
+**Response**: `{"resolved_media": {...}, "candidates": [...]}` — resolved media info + list of subtitle candidates with provider, subtitle_id, language, score, matches, etc.
+
+### `bazarr_sync.download_best_subtitle`
+
+Download the best matching subtitle for a movie or episode.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config_entry_id` | string | Yes | Config Entry ID of the Bazarr Sync instance |
+| `media_type` | `movie` \| `episode` | Yes | Media type |
+| `title` | string | Yes | Movie title, or series title when Media Type is Episode |
+| `year` | integer | No | Movie or series year. Use it when multiple titles have the same name. |
+| `season` | integer | No | Season number (required for episodes) |
+| `episode` | integer | No | Episode number (required for episodes) |
+| `language` | string | Yes | Language code (e.g., `en`, `pt-BR`) |
+| `hearing_impaired` | boolean | No | Default: false |
+| `forced` | boolean | No | Default: false |
+| `original_format` | boolean | No | Default: false |
+
+**Response**: `{"success": true, "resolved_media": {...}, "selected_candidate": {...}}` — resolved media info + selected subtitle candidate details.
+
+### `bazarr_sync.sync_subtitle_auto`
+
+Synchronize an installed subtitle against a reference track automatically.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config_entry_id` | string | Yes | Config Entry ID of the Bazarr Sync instance |
+| `media_type` | `movie` \| `episode` | Yes | Media type |
+| `title` | string | Yes | Movie title, or series title when Media Type is Episode |
+| `year` | integer | No | Movie or series year. Use it when multiple titles have the same name. |
+| `season` | integer | No | Season number (required for episodes) |
+| `episode` | integer | No | Episode number (required for episodes) |
+| `subtitle_language` | string | Yes | Language of the installed subtitle to sync (e.g., `en`, `pt-BR`) |
+| `hearing_impaired` | boolean | No | Default: false |
+| `forced` | boolean | No | Default: false |
+| `original_format` | boolean | No | Default: false |
+| `max_offset_seconds` | integer | No | Maximum offset allowed |
+| `no_fix_framerate` | boolean | No | Default: false |
+| `gss` | boolean | No | Default: false |
+
+**Response**: `{"success": true, "resolved_media": {...}, "subtitle": {...}}` — resolved media info + synced subtitle info.
+
+## Advanced / API Actions
+
+These actions use internal Bazarr IDs (`radarrId`, `sonarrEpisodeId`, `sonarrSeriesId`) and are intended for custom frontend cards (e.g. Octopus Media Card), advanced automations, and integrations that already have the internal IDs.
+
+All actions require `config_entry_id` to identify the target Bazarr instance.
+
+### `bazarr_sync.search_subtitles` (Advanced / API)
 
 Search for available subtitles for a movie or episode.
 
@@ -60,7 +125,7 @@ Search for available subtitles for a movie or episode.
 
 **Response**: `{"candidates": [...]}` — list of subtitle candidates with provider, subtitle_id, language, score, matches, etc.
 
-### `bazarr_sync.download_subtitle`
+### `bazarr_sync.download_subtitle` (Advanced / API)
 
 Download a specific subtitle found in a previous search.
 
@@ -77,7 +142,7 @@ Download a specific subtitle found in a previous search.
 | `forced` | boolean | No | Default: false |
 | `original_format` | boolean | No | Default: false |
 
-### `bazarr_sync.sync_subtitle`
+### `bazarr_sync.sync_subtitle` (Advanced / API)
 
 Synchronize an existing installed subtitle against a reference track.
 

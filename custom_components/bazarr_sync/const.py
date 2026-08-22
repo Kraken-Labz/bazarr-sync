@@ -27,3 +27,8 @@ WS_TYPE_SYNC_SUBTITLE = "bazarr_sync/sync_subtitle"
 ACTION_SEARCH_SUBTITLES = "search_subtitles"
 ACTION_DOWNLOAD_SUBTITLE = "download_subtitle"
 ACTION_SYNC_SUBTITLE = "sync_subtitle"
+
+# Human-friendly action names
+ACTION_FIND_SUBTITLES = "find_subtitles"
+ACTION_DOWNLOAD_BEST_SUBTITLE = "download_best_subtitle"
+ACTION_SYNC_SUBTITLE_AUTO = "sync_subtitle_auto"
