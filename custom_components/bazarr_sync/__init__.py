@@ -13,6 +13,15 @@ from .websocket import async_register_websocket_commands
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Bazarr Sync integration."""
+    # Register services globally
+    _register_services(hass)
+    # Register WebSocket commands globally
+    async_register_websocket_commands(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: BazarrSyncConfigEntry) -> bool:
     """Set up Bazarr Sync from a config entry."""
     coordinator = BazarrDataUpdateCoordinator(hass, entry)
@@ -23,12 +32,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: BazarrSyncConfigEntry) -
     entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services
-    _register_services(hass)
-
-    # Register WebSocket commands
-    async_register_websocket_commands(hass)
 
     return True
 

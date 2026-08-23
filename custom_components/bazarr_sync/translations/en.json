@@ -45,8 +45,113 @@
     }
   },
   "services": {
+    "find_subtitles": {
+      "name": "Find Subtitles",
+      "description": "Search for available subtitles for a movie or episode",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "year": {
+          "name": "Year"
+        },
+        "season": {
+          "name": "Season"
+        },
+        "episode": {
+          "name": "Episode"
+        }
+      }
+    },
+    "download_best_subtitle": {
+      "name": "Download Best Subtitle",
+      "description": "Download the best matching subtitle for a movie or episode",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "year": {
+          "name": "Year"
+        },
+        "season": {
+          "name": "Season"
+        },
+        "episode": {
+          "name": "Episode"
+        },
+        "language": {
+          "name": "Language"
+        },
+        "hearing_impaired": {
+          "name": "Hearing Impaired"
+        },
+        "forced": {
+          "name": "Forced"
+        },
+        "original_format": {
+          "name": "Original Format"
+        }
+      }
+    },
+    "sync_subtitle_auto": {
+      "name": "Sync Subtitle Automatically",
+      "description": "Synchronize an installed subtitle against a reference track automatically",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "media_type": {
+          "name": "Media Type"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "year": {
+          "name": "Year"
+        },
+        "season": {
+          "name": "Season"
+        },
+        "episode": {
+          "name": "Episode"
+        },
+        "subtitle_language": {
+          "name": "Subtitle Language"
+        },
+        "hearing_impaired": {
+          "name": "Hearing Impaired"
+        },
+        "forced": {
+          "name": "Forced"
+        },
+        "original_format": {
+          "name": "Original Format"
+        },
+        "max_offset_seconds": {
+          "name": "Max Offset Seconds"
+        },
+        "no_fix_framerate": {
+          "name": "No Fix Framerate"
+        },
+        "gss": {
+          "name": "Golden Section Search"
+        }
+      }
+    },
     "search_subtitles": {
-      "name": "Search Subtitles",
+      "name": "Search Subtitles (Advanced / API)",
       "description": "Search for available subtitles for a movie or episode",
       "fields": {
         "config_entry_id": {
@@ -64,7 +169,7 @@
       }
     },
     "download_subtitle": {
-      "name": "Download Subtitle",
+      "name": "Download Subtitle (Advanced / API)",
       "description": "Download a specific subtitle found in search",
       "fields": {
         "config_entry_id": {
@@ -100,7 +205,7 @@
       }
     },
     "sync_subtitle": {
-      "name": "Sync Subtitle",
+      "name": "Sync Subtitle (Advanced / API)",
       "description": "Synchronize a subtitle against a reference track",
       "fields": {
         "config_entry_id": {
