@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_URL
@@ -18,7 +18,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class BazarrDataUpdateCoordinator(DataUpdateCoordinator[dict]):
+class BazarrDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching Bazarr data."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -33,7 +33,7 @@ class BazarrDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self.api_token = entry.data[CONF_API_KEY]
         self._client = BazarrClient(hass, self.url, self.api_token, max_concurrent=5)
 
-    async def ensure_tokens(self):
+    async def ensure_tokens(self) -> None:
         """Ensure that the API tokens are valid."""
         try:
             await self._client.async_get_status()
@@ -44,7 +44,7 @@ class BazarrDataUpdateCoordinator(DataUpdateCoordinator[dict]):
                 f"Timed out while connecting to {self.url}"
             ) from err
 
-    async def _async_update_data(self) -> dict:
+    async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Bazarr API."""
         try:
             badges_data = await self._client.async_get_badges()
@@ -61,5 +61,5 @@ class BazarrDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             _LOGGER.debug(f"Coordinator data: {data}")
 
             return data
-        except (BazarrError, asyncio.TimeoutError) as err:
+        except (TimeoutError, BazarrError) as err:
             raise UpdateFailed(f"Error communicating with Bazarr API: {err}") from err

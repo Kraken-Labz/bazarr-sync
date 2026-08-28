@@ -225,14 +225,12 @@ class MediaResolver:
                 break
 
         if not episode_match:
-            # Get available seasons/episodes for error message
-            available = {}
+            available: dict[int, list[int]] = {}
             for ep in episodes:
                 s = ep.get("seasonNumber")
                 e = ep.get("episodeNumber")
-                if s not in available:
-                    available[s] = []
-                available[s].append(e)
+                if isinstance(s, int) and isinstance(e, int):
+                    available.setdefault(s, []).append(e)
 
             raise MediaNotFoundError(
                 f"Episode S{season:02d}E{episode:02d} not found for series '{series.get('title', '')}'. "
@@ -268,17 +266,17 @@ class MediaResolver:
             return []
 
         item = data[0]
-        subtitles = item.get("subtitles", [])
+        subtitles: list[dict[str, Any]] = item.get("subtitles", [])
 
-        result = []
+        installed: list[dict[str, Any]] = []
         for sub in subtitles:
             path = sub.get("path")
-            subtitle_id = (
+            subtitle_id: str | None = (
                 self._generate_subtitle_id(resolved.media_type, resolved.media_id, path)
-                if path
+                if isinstance(path, str) and path
                 else None
             )
-            result.append(
+            installed.append(
                 {
                     "subtitle_id": subtitle_id,
                     "language": sub.get("name"),
@@ -290,7 +288,7 @@ class MediaResolver:
                     "embedded_track_id": sub.get("embedded_track_id"),
                 }
             )
-        return result
+        return installed
 
     def _generate_subtitle_id(
         self, media_type: str, media_id: int, subtitle_path: str

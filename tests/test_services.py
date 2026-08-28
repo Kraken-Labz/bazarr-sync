@@ -754,17 +754,112 @@ class TestLifecycle:
             # The actual registration happens in async_setup
             mock_register_services.assert_not_called()
 
-    async def test_config_entry_reload_does_not_remove_actions(self):
-        """Reloading a ConfigEntry should not remove registered actions."""
-        assert True  # Conceptual test - actions are global
+    async def test_config_entry_reload_does_not_remove_actions(self, hass):
+        """Reloading a ConfigEntry keeps global actions registered."""
+        from custom_components.bazarr_sync import (
+            async_setup,
+            async_setup_entry,
+            async_unload_entry,
+        )
 
-    async def test_config_entry_unload_does_not_remove_actions(self):
-        """Unloading a ConfigEntry should NOT remove global actions."""
-        assert True  # Conceptual test - actions are global
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=None)
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+        entry = MagicMock()
+        entry.data = {"url": "http://localhost:6767", "api_key": "k"}
+        entry.entry_id = "test-entry"
 
-    async def test_multiple_config_entries_no_double_registration(self):
-        """Two ConfigEntries should not cause double registration."""
-        assert True  # Conceptual test - actions are global
+        with patch(
+            "custom_components.bazarr_sync.BazarrDataUpdateCoordinator"
+        ) as mock_coord_cls:
+            mock_coord = MagicMock()
+            mock_coord.ensure_tokens = AsyncMock()
+            mock_coord.async_config_entry_first_refresh = AsyncMock()
+            mock_coord_cls.return_value = mock_coord
+
+            await async_setup(hass, {})
+            hass.services.async_register.reset_mock()
+            hass.data = {}
+
+            await async_setup_entry(hass, entry)
+            await async_unload_entry(hass, entry)
+
+            hass.services.async_register.assert_not_called()
+
+            await async_setup_entry(hass, entry)
+            hass.services.async_register.assert_not_called()
+
+    async def test_config_entry_unload_does_not_remove_actions(self, hass):
+        """Unloading a ConfigEntry keeps global actions registered."""
+        from custom_components.bazarr_sync import (
+            async_setup,
+            async_setup_entry,
+            async_unload_entry,
+        )
+
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=None)
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+        entry = MagicMock()
+        entry.data = {"url": "http://localhost:6767", "api_key": "k"}
+        entry.entry_id = "test-entry"
+
+        with patch(
+            "custom_components.bazarr_sync.BazarrDataUpdateCoordinator"
+        ) as mock_coord_cls:
+            mock_coord = MagicMock()
+            mock_coord.ensure_tokens = AsyncMock()
+            mock_coord.async_config_entry_first_refresh = AsyncMock()
+            mock_coord_cls.return_value = mock_coord
+
+            await async_setup(hass, {})
+            hass.services.async_register.reset_mock()
+            hass.data = {}
+
+            await async_setup_entry(hass, entry)
+            await async_unload_entry(hass, entry)
+
+            hass.services.async_remove.assert_not_called()
+            assert (
+                not any(
+                    call[0][0] == "bazarr_sync"
+                    for call in hass.services.async_remove.call_args_list
+                )
+                if hasattr(hass.services, "async_remove")
+                else True
+            )
+
+    async def test_multiple_config_entries_no_double_registration(self, hass):
+        """Two ConfigEntries share global services without duplication."""
+        from custom_components.bazarr_sync import async_setup, async_setup_entry
+
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=None)
+        entry1 = MagicMock()
+        entry1.data = {"url": "http://localhost:6767", "api_key": "k"}
+        entry1.entry_id = "entry-1"
+        entry2 = MagicMock()
+        entry2.data = {"url": "http://localhost:6767", "api_key": "k2"}
+        entry2.entry_id = "entry-2"
+
+        with patch(
+            "custom_components.bazarr_sync.BazarrDataUpdateCoordinator"
+        ) as mock_coord_cls:
+            mock_coord = MagicMock()
+            mock_coord.ensure_tokens = AsyncMock()
+            mock_coord.async_config_entry_first_refresh = AsyncMock()
+            mock_coord_cls.return_value = mock_coord
+
+            await async_setup(hass, {})
+            call_count_after_setup = len(hass.services.async_register.call_args_list)
+
+            await async_setup_entry(hass, entry1)
+            await async_setup_entry(hass, entry2)
+
+            assert (
+                len(hass.services.async_register.call_args_list)
+                == call_count_after_setup
+            )
 
     async def test_websocket_commands_registered_globally(self, hass, mock_client):
         """WebSocket commands should be registered once globally."""

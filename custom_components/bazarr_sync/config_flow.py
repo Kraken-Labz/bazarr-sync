@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -38,7 +37,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             result = await response.json()
             if "data" not in result or "bazarr_version" not in result.get("data", {}):
                 raise CannotConnect
-    except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+    except (TimeoutError, aiohttp.ClientError) as err:
         if isinstance(err, aiohttp.ClientResponseError) and err.status == 401:
             return {"base": "invalid_api_key"}
         return {"base": "cannot_connect"}

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import homeassistant.helpers.config_validation as cv
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import DOMAIN
 from .coordinator import BazarrDataUpdateCoordinator
 from .services import _register_services
 from .types import BazarrSyncConfigEntry
@@ -12,12 +16,12 @@ from .websocket import async_register_websocket_commands
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up the Bazarr Sync integration."""
-    # Register services globally
     _register_services(hass)
-    # Register WebSocket commands globally
     async_register_websocket_commands(hass)
     return True
 

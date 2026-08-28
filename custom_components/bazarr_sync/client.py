@@ -224,7 +224,7 @@ class BazarrClient:
                     )
                     raise BazarrError(f"HTTP error {err.status}: {err}") from err
 
-                except asyncio.TimeoutError as err:
+                except TimeoutError as err:
                     last_exception = err
                     if is_idempotent and attempt < self._max_retries:
                         delay = self._retry_base_delay * (2**attempt)

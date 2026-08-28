@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from functools import partial
-from typing import Any
+from typing import Any, cast
 
 import voluptuous as vol
 from homeassistant.core import (
@@ -42,7 +42,7 @@ def _get_coordinator(hass: HomeAssistant, entry_id: str) -> BazarrClient:
     return entry.runtime_data._client
 
 
-def _get_resolver(hass: HomeAssistant, entry_id: str):
+def _get_resolver(hass: HomeAssistant, entry_id: str) -> MediaResolver:
     """Get a MediaResolver for an entry."""
     client = _get_coordinator(hass, entry_id)
     return MediaResolver(client)
@@ -162,10 +162,10 @@ async def async_find_subtitles(
             results = await client.async_search_episode_subtitles(resolved.media_id)
 
         candidates = [SubtitleCandidate.from_bazarr(r).as_dict() for r in results]
-        return {
-            "resolved_media": resolved.as_dict(),
-            "candidates": candidates,
-        }  # type: ignore[dict-item,return-value]
+        return cast(
+            ServiceResponse,
+            {"resolved_media": resolved.as_dict(), "candidates": candidates},
+        )
     except BazarrError as err:
         raise HomeAssistantError(f"Bazarr error: {err}") from err
 
@@ -223,18 +223,21 @@ async def async_download_best_subtitle(
                 original_format=original_format,
             )
 
-        return {
-            "success": True,
-            "resolved_media": resolved.as_dict(),
-            "selected_candidate": {
-                "provider": best.provider,
-                "subtitle_id": best.subtitle_id,
-                "language": best.language,
-                "score": best.score,
-                "forced": best.forced,
-                "hearing_impaired": best.hearing_impaired,
+        return cast(
+            ServiceResponse,
+            {
+                "success": True,
+                "resolved_media": resolved.as_dict(),
+                "selected_candidate": {
+                    "provider": best.provider,
+                    "subtitle_id": best.subtitle_id,
+                    "language": best.language,
+                    "score": best.score,
+                    "forced": best.forced,
+                    "hearing_impaired": best.hearing_impaired,
+                },
             },
-        }  # type: ignore[dict-item,return-value]
+        )
     except BazarrError as err:
         raise HomeAssistantError(f"Bazarr error: {err}") from err
 
@@ -262,12 +265,11 @@ async def async_sync_subtitle_auto(
     )
 
     if installed_sub is None:
-        # Build helpful error message with available languages/flags
         installed = await resolver.get_installed_subtitles_for_media(resolved)
-        available = {}
+        available: dict[str, int] = {}
         for sub in installed:
-            lang = sub.get("language", "unknown")
-            flags = []
+            lang = str(sub.get("language", "unknown"))
+            flags: list[str] = []
             if sub.get("forced"):
                 flags.append("forced")
             if sub.get("hearing_impaired"):
@@ -313,16 +315,19 @@ async def async_sync_subtitle_auto(
             gss=gss,
         )
 
-        return {
-            "success": True,
-            "resolved_media": resolved.as_dict(),
-            "subtitle": {
-                "subtitle_id": installed_sub["subtitle_id"],
-                "language": installed_sub.get("language"),
-                "forced": installed_sub.get("forced", False),
-                "hearing_impaired": installed_sub.get("hearing_impaired", False),
+        return cast(
+            ServiceResponse,
+            {
+                "success": True,
+                "resolved_media": resolved.as_dict(),
+                "subtitle": {
+                    "subtitle_id": installed_sub["subtitle_id"],
+                    "language": installed_sub.get("language"),
+                    "forced": installed_sub.get("forced", False),
+                    "hearing_impaired": installed_sub.get("hearing_impaired", False),
+                },
             },
-        }  # type: ignore[dict-item,return-value]
+        )
     except BazarrError as err:
         raise HomeAssistantError(f"Bazarr error: {err}") from err
 
@@ -350,7 +355,7 @@ async def async_search_subtitles(
             results = await client.async_search_episode_subtitles(media_id)
 
         candidates = [SubtitleCandidate.from_bazarr(r).as_dict() for r in results]
-        return {"candidates": candidates}  # type: ignore[dict-item,return-value]
+        return cast(ServiceResponse, {"candidates": candidates})
     except BazarrError as err:
         raise HomeAssistantError(f"Bazarr error: {err}") from err
 
