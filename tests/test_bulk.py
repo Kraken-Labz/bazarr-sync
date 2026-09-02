@@ -299,8 +299,17 @@ class TestSyncAll:
             call = make_call({"config_entry_id": "e1", "scope": "movies"})
             res = await async_sync_all_subtitles(hass, call)
             assert res["scope"] == "movies"
-            assert res["eligible_count"] == 1
-            assert res["skipped_count"] == 2
+            assert res["status"] == "preparing"
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["total"] == 1
+            assert status["skipped"] == 2
 
     async def test_scope_episodes(self, episode_with_subs):
         mock_client = AsyncMock()
@@ -319,7 +328,16 @@ class TestSyncAll:
         ):
             call = make_call({"config_entry_id": "e1", "scope": "episodes"})
             res = await async_sync_all_subtitles(hass, call)
-            assert res["eligible_count"] == 1
+            assert res["status"] == "preparing"
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["total"] == 1
 
     async def test_scope_all(self, movie_with_subs, episode_with_subs):
         mock_client = AsyncMock()
@@ -338,7 +356,16 @@ class TestSyncAll:
         ):
             call = make_call({"config_entry_id": "e1", "scope": "all"})
             res = await async_sync_all_subtitles(hass, call)
-            assert res["eligible_count"] == 2
+            assert res["status"] == "preparing"
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["total"] == 2
 
     async def test_forced_skipped(self, movie_with_subs):
         mock_client = AsyncMock()
@@ -357,7 +384,15 @@ class TestSyncAll:
         ):
             call = make_call({"config_entry_id": "e1", "scope": "movies"})
             res = await async_sync_all_subtitles(hass, call)
-            assert res["skipped_count"] >= 1
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["skipped"] >= 1
 
     async def test_embedded_skipped(self, episode_with_subs):
         mock_client = AsyncMock()
@@ -376,7 +411,15 @@ class TestSyncAll:
         ):
             call = make_call({"config_entry_id": "e1", "scope": "episodes"})
             res = await async_sync_all_subtitles(hass, call)
-            assert res["skipped_count"] == 1
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["skipped"] == 1
 
     async def test_language_filter(self, movie_with_subs):
         movie_with_subs[0]["subtitles"].append(
@@ -407,8 +450,17 @@ class TestSyncAll:
                 {"config_entry_id": "e1", "scope": "movies", "language": "pt"}
             )
             res = await async_sync_all_subtitles(hass, call)
-            assert res["eligible_count"] == 1
-            assert res["skipped_count"] == 3
+            assert res["status"] == "preparing"
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["total"] == 1
+            assert status["skipped"] == 3
 
     async def test_no_paths_in_response(self, movie_with_subs):
         mock_client = AsyncMock()
@@ -429,7 +481,9 @@ class TestSyncAll:
             res = await async_sync_all_subtitles(hass, call)
             s = str(res)
             assert "/subs/" not in s
-            assert "path" not in s.lower() or "eligible_count" in s.lower()
+            # Immediate response is preparing without counts/paths
+            assert res["status"] == "preparing"
+            assert "eligible_count" not in res
 
     async def test_mutation_exactly_once(self):
         movies = [
@@ -554,8 +608,16 @@ class TestSyncAll:
         ):
             call = make_call({"config_entry_id": "e1", "scope": "movies"})
             res = await async_sync_all_subtitles(hass, call)
-            assert res["eligible_count"] == 1
-            assert res["skipped_count"] == 2
+            await asyncio.sleep(0.1)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["total"] == 1
+            assert status["skipped"] == 2
 
     async def test_duplicate_active_bulk_prevented(self, movie_with_subs):
         mock_client = AsyncMock()

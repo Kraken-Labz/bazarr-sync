@@ -399,7 +399,23 @@ async def async_search_all_missing_subtitles(
 SUBMISSION_CONCURRENCY = 1
 
 
-async def _sync_all_task(
+def _prune_bulk_jobs(hass: HomeAssistant, entry_id: str, keep: int = 20) -> None:
+    jobs = _get_bulk_jobs(hass)
+    related = [
+        j
+        for j in jobs.values()
+        if j.get("entry_id") == entry_id
+        and j.get("status")
+        in ("submission_completed", "partial_failure", "failed", "cancelled")
+    ]
+    if len(related) <= keep:
+        return
+    related_sorted = sorted(related, key=lambda x: x.get("job_id", ""))
+    for old in related_sorted[:-keep]:
+        jobs.pop(old.get("job_id", ""), None)
+
+
+async def _prepare_and_submit_bulk_sync(
     hass: HomeAssistant,
     entry_id: str,
     job_id: str,
@@ -410,31 +426,111 @@ async def _sync_all_task(
     job = jobs.get(job_id)
     if not job:
         return
+    if hass.is_stopping:
+        job["status"] = "cancelled"
+        return
     client = _get_coordinator(hass, entry_id)
-    eligible: list[dict[str, Any]] = job.get("eligible", [])
-    job["total"] = len(eligible)
-    job["status"] = "submitting"
-    preflight_skipped: int = int(job.get("skipped", 0))
+    eligible: list[dict[str, Any]] = []
+    skipped = 0
+    try:
+        if scope in ("all", "movies"):
+            if hass.is_stopping:
+                job["status"] = "cancelled"
+                return
+            movies = await client.async_get_all_movies()
+            for m in movies:
+                if hass.is_stopping:
+                    job["status"] = "cancelled"
+                    return
+                for sub in m.get("subtitles", []):
+                    code2 = sub.get("code2")
+                    if not code2 or not isinstance(code2, str) or not code2.strip():
+                        skipped += 1
+                        continue
+                    if not _is_eligible_subtitle(sub, language):
+                        skipped += 1
+                        continue
+                    path = sub.get("path")
+                    if not isinstance(path, str) or not path:
+                        skipped += 1
+                        continue
+                    eligible.append(
+                        {
+                            "path": path,
+                            "media_type": "movie",
+                            "media_id": m.get("radarrId"),
+                            "language_code": code2,
+                            "forced": bool(sub.get("forced")),
+                            "hearing_impaired": bool(sub.get("hi")),
+                            "embedded_track_id": sub.get("embedded_track_id"),
+                        }
+                    )
+        if scope in ("all", "episodes"):
+            if hass.is_stopping:
+                job["status"] = "cancelled"
+                return
+            episodes = await client.async_get_all_episodes()
+            for ep in episodes:
+                if hass.is_stopping:
+                    job["status"] = "cancelled"
+                    return
+                for sub in ep.get("subtitles", []):
+                    code2 = sub.get("code2")
+                    if not code2 or not isinstance(code2, str) or not code2.strip():
+                        skipped += 1
+                        continue
+                    if not _is_eligible_subtitle(sub, language):
+                        skipped += 1
+                        continue
+                    path = sub.get("path")
+                    if not isinstance(path, str) or not path:
+                        skipped += 1
+                        continue
+                    eligible.append(
+                        {
+                            "path": path,
+                            "media_type": "episode",
+                            "media_id": ep.get("sonarrEpisodeId"),
+                            "language_code": code2,
+                            "forced": bool(sub.get("forced")),
+                            "hearing_impaired": bool(sub.get("hi")),
+                            "embedded_track_id": sub.get("embedded_track_id"),
+                        }
+                    )
+        eligible = [e for e in eligible if e.get("media_id") is not None]
+        job["total"] = len(eligible)
+        job["skipped"] = skipped
+        job["status"] = "submitting"
+        job["processed"] = 0
+        job["submitted"] = 0
+        job["failed"] = 0
+    except asyncio.CancelledError:
+        job["status"] = "cancelled"
+        raise
+    except BazarrError as err:
+        _LOGGER.error("Bulk sync preflight failed: %s", err)
+        job["status"] = "failed"
+        job["skipped"] = skipped
+        job["total"] = len(eligible)
+        return
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.error("Bulk sync preflight failed: %s", err)
+        job["status"] = "failed"
+        return
+
+    if hass.is_stopping:
+        job["status"] = "cancelled"
+        return
+
     processed = 0
     submitted = 0
-    skipped = preflight_skipped
     failed = 0
-
     try:
         for item in eligible:
             if hass.is_stopping:
                 job["status"] = "cancelled"
                 break
             try:
-                if item.get("forced"):
-                    skipped += 1
-                    continue
-                if item.get("embedded_track_id") is not None:
-                    skipped += 1
-                    continue
-                if not item.get("language_code"):
-                    skipped += 1
-                    continue
                 await client.async_sync_subtitle(
                     action="sync",
                     language=str(item.get("language_code")),
@@ -455,12 +551,10 @@ async def _sync_all_task(
                 processed += 1
                 job["processed"] = processed
                 job["submitted"] = submitted
-                job["skipped"] = skipped
                 job["failed"] = failed
-        else:
-            pass
         if hass.is_stopping or processed < len(eligible):
-            job["status"] = "cancelled"
+            if job.get("status") != "cancelled":
+                job["status"] = "cancelled"
         elif failed == 0:
             job["status"] = "submission_completed"
         elif submitted > 0 and failed > 0:
@@ -475,24 +569,25 @@ async def _sync_all_task(
     finally:
         job["processed"] = processed
         job["submitted"] = submitted
-        job["skipped"] = skipped
         job["failed"] = failed
+
+
+async def _sync_all_task(
+    hass: HomeAssistant,
+    entry_id: str,
+    job_id: str,
+    scope: str,
+    language: str | None,
+) -> None:
+    await _prepare_and_submit_bulk_sync(hass, entry_id, job_id, scope, language)
 
 
 async def async_sync_all_subtitles(
     hass: HomeAssistant, call: ServiceCall
 ) -> ServiceResponse:
-    """Sync all eligible external subtitles (library-wide).
-
-    Audit: Bazarr 2025.x has no native bulk sync endpoint (audited Mass Edit
-    -> PATCH /api/subtitles per item). This orchestrates serial submissions
-    (SUBMISSION_CONCURRENCY=1) as background job. Each PATCH just submits to
-    Bazarr internal queue; physical sync completes asynchronously.
-    """
     entry_id = call.data["config_entry_id"]
     scope = call.data.get("scope", "all")
     language = call.data.get("language")
-    client = _get_coordinator(hass, entry_id)
     jobs = _get_bulk_jobs(hass)
 
     for existing in jobs.values():
@@ -506,84 +601,24 @@ async def async_sync_all_subtitles(
                 f"Wait for completion or check status via get_bulk_sync_status."
             )
 
-    eligible: list[dict[str, Any]] = []
-    skipped_count = 0
-
-    try:
-        if scope in ("all", "movies"):
-            movies = await client.async_get_all_movies()
-            for m in movies:
-                subs = m.get("subtitles", [])
-                for sub in subs:
-                    code2 = sub.get("code2")
-                    if not code2 or not isinstance(code2, str) or not code2.strip():
-                        skipped_count += 1
-                        continue
-                    if not _is_eligible_subtitle(sub, language):
-                        skipped_count += 1
-                        continue
-                    path = sub.get("path")
-                    if not isinstance(path, str) or not path:
-                        skipped_count += 1
-                        continue
-                    eligible.append(
-                        {
-                            "path": path,
-                            "media_type": "movie",
-                            "media_id": m.get("radarrId"),
-                            "language_code": code2,
-                            "forced": bool(sub.get("forced")),
-                            "hearing_impaired": bool(sub.get("hi")),
-                            "embedded_track_id": sub.get("embedded_track_id"),
-                        }
-                    )
-        if scope in ("all", "episodes"):
-            episodes = await client.async_get_all_episodes()
-            for ep in episodes:
-                subs = ep.get("subtitles", [])
-                for sub in subs:
-                    code2 = sub.get("code2")
-                    if not code2 or not isinstance(code2, str) or not code2.strip():
-                        skipped_count += 1
-                        continue
-                    if not _is_eligible_subtitle(sub, language):
-                        skipped_count += 1
-                        continue
-                    path = sub.get("path")
-                    if not isinstance(path, str) or not path:
-                        skipped_count += 1
-                        continue
-                    eligible.append(
-                        {
-                            "path": path,
-                            "media_type": "episode",
-                            "media_id": ep.get("sonarrEpisodeId"),
-                            "language_code": code2,
-                            "forced": bool(sub.get("forced")),
-                            "hearing_impaired": bool(sub.get("hi")),
-                            "embedded_track_id": sub.get("embedded_track_id"),
-                        }
-                    )
-    except BazarrError as err:
-        raise HomeAssistantError(f"Bazarr error: {err}") from err
-
-    eligible = [e for e in eligible if e.get("media_id") is not None]
     job_id = uuid.uuid4().hex[:8]
     job: dict[str, Any] = {
         "job_id": job_id,
         "entry_id": entry_id,
         "scope": scope,
-        "status": "submitting",
-        "total": len(eligible),
+        "status": "preparing",
+        "total": 0,
         "processed": 0,
         "submitted": 0,
-        "skipped": skipped_count,
+        "skipped": 0,
         "failed": 0,
-        "eligible": eligible,
     }
     jobs[job_id] = job
+    _prune_bulk_jobs(hass, entry_id)
 
-    hass.async_create_task(_sync_all_task(hass, entry_id, job_id, scope, language))
+    hass.async_create_task(
+        _prepare_and_submit_bulk_sync(hass, entry_id, job_id, scope, language)
+    )
 
     return cast(
         ServiceResponse,
@@ -591,9 +626,7 @@ async def async_sync_all_subtitles(
             "accepted": True,
             "scope": scope,
             "job_id": job_id,
-            "eligible_count": len(eligible),
-            "skipped_count": skipped_count,
-            "status": "submitting",
+            "status": "preparing",
         },
     )
 
