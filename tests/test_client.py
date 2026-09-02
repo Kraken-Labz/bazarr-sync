@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -97,7 +96,7 @@ class TestBazarrClient:
         """Test timeout raises BazarrTimeoutError."""
 
         def mock_request(*args, **kwargs):
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
 
         client._session.request = mock_request
 
@@ -551,7 +550,7 @@ class TestBazarrClient:
                 nonlocal call_count
                 call_count += 1
                 if call_count <= 1:
-                    raise asyncio.TimeoutError()
+                    raise TimeoutError()
                 return MockRequestContextManager(MockResponse(200, {"data": "success"}))
 
             client._session.request = mock_request

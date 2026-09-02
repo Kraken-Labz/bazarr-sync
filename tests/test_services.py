@@ -448,7 +448,7 @@ class TestServicesYAML:
         assert isinstance(doc, dict), "Root must be a mapping"
 
     def test_services_yaml_actions_exist(self):
-        """Top-level keys must be the six expected actions (3 human-friendly + 3 advanced)."""
+        """Top-level keys must be the eight expected actions (5 human-friendly + 3 advanced)."""
         from pathlib import Path
 
         import yaml
@@ -461,6 +461,8 @@ class TestServicesYAML:
             "find_subtitles",
             "download_best_subtitle",
             "sync_subtitle_auto",
+            "search_all_missing_subtitles",
+            "sync_all_subtitles",
             "search_subtitles",
             "download_subtitle",
             "sync_subtitle",
@@ -691,13 +693,15 @@ class TestLifecycle:
     async def test_async_setup_registers_actions_globally(
         self, hass, mock_entry, mock_client
     ):
-        """async_setup should register all 6 actions globally."""
+        """async_setup should register all 8 actions globally."""
         from custom_components.bazarr_sync import async_setup
         from custom_components.bazarr_sync.const import (
             ACTION_DOWNLOAD_BEST_SUBTITLE,
             ACTION_DOWNLOAD_SUBTITLE,
             ACTION_FIND_SUBTITLES,
+            ACTION_SEARCH_ALL_MISSING,
             ACTION_SEARCH_SUBTITLES,
+            ACTION_SYNC_ALL_SUBTITLES,
             ACTION_SYNC_SUBTITLE,
             ACTION_SYNC_SUBTITLE_AUTO,
         )
@@ -713,7 +717,7 @@ class TestLifecycle:
         ):
             await async_setup(hass, {})
 
-            # Check all 6 actions were registered
+            # Check all 8 actions were registered
             register_calls = hass.services.async_register.call_args_list
             # call_args is (args, kwargs), action name is args[1]
             registered_actions = {call_args[0][1] for call_args in register_calls}
@@ -722,12 +726,14 @@ class TestLifecycle:
                 ACTION_FIND_SUBTITLES,
                 ACTION_DOWNLOAD_BEST_SUBTITLE,
                 ACTION_SYNC_SUBTITLE_AUTO,
+                ACTION_SEARCH_ALL_MISSING,
+                ACTION_SYNC_ALL_SUBTITLES,
                 ACTION_SEARCH_SUBTITLES,
                 ACTION_DOWNLOAD_SUBTITLE,
                 ACTION_SYNC_SUBTITLE,
             }
             assert registered_actions == expected_actions
-            assert len(register_calls) == 6
+            assert len(register_calls) == 8
 
     async def test_async_setup_entry_does_not_register_actions(
         self, hass, mock_entry, mock_client

@@ -23,6 +23,7 @@ from .const import (
     API_SUBTITLES,
     API_SYSTEM_HEALTH,
     API_SYSTEM_STATUS,
+    API_TASKS,
 )
 from .util import generate_external_reference_id
 
@@ -565,3 +566,83 @@ class BazarrClient:
             data["gss"] = "True"
 
         await self._request("PATCH", API_SUBTITLES, data=data)
+
+    async def async_trigger_task(self, task_id: str) -> dict[str, Any]:
+        """Trigger a native Bazarr system task.
+
+        Bazarr exposes wanted search as system tasks:
+        - wanted_search_missing_subtitles_movies
+        - wanted_search_missing_subtitles_series
+
+        Endpoint audited against Bazarr 2025.x:
+        POST /api/tasks with form field taskid=<task_id>
+        Fallback is POST /api/system/tasks for older builds.
+        Returns native task response (status/queued/started).
+        """
+        try:
+            result = await self._request("POST", API_TASKS, data={"taskid": task_id})
+            return result if isinstance(result, dict) else {"status": "started"}
+        except BazarrNotFoundError:
+            result = await self._request(
+                "POST", "/api/system/tasks", data={"taskid": task_id}
+            )
+            return result if isinstance(result, dict) else {"status": "started"}
+
+    async def async_trigger_wanted_search(
+        self, scope: str = "all"
+    ) -> list[dict[str, Any]]:
+        """Trigger wanted search per scope using native tasks."""
+        tasks: list[dict[str, Any]] = []
+        if scope in ("all", "movies"):
+            from .const import TASK_WANTED_MOVIES
+
+            try:
+                res = await self.async_trigger_task(TASK_WANTED_MOVIES)
+                tasks.append({"type": "movies", "task_id": TASK_WANTED_MOVIES, **res})
+            except BazarrError as err:
+                tasks.append(
+                    {
+                        "type": "movies",
+                        "task_id": TASK_WANTED_MOVIES,
+                        "status": "error",
+                        "error": str(err),
+                    }
+                )
+        if scope in ("all", "episodes"):
+            from .const import TASK_WANTED_SERIES
+
+            try:
+                res = await self.async_trigger_task(TASK_WANTED_SERIES)
+                tasks.append({"type": "episodes", "task_id": TASK_WANTED_SERIES, **res})
+            except BazarrError as err:
+                tasks.append(
+                    {
+                        "type": "episodes",
+                        "task_id": TASK_WANTED_SERIES,
+                        "status": "error",
+                        "error": str(err),
+                    }
+                )
+        return tasks
+
+    async def async_get_all_movies(self) -> list[dict[str, Any]]:
+        """Get all movies (handles pagination)."""
+        result = await self.async_get_movies(start=0, length=-1)
+        return result.get("data", [])
+
+    async def async_get_all_series(self) -> list[dict[str, Any]]:
+        """Get all series."""
+        result = await self.async_get_series(start=0, length=-1)
+        return result.get("data", [])
+
+    async def async_get_all_episodes(self) -> list[dict[str, Any]]:
+        """Get all episodes across all series."""
+        series = await self.async_get_all_series()
+        all_eps: list[dict[str, Any]] = []
+        for s in series:
+            sid = s.get("sonarrSeriesId")
+            if sid is None:
+                continue
+            eps = await self.async_get_episodes(series_ids=[sid])
+            all_eps.extend(eps)
+        return all_eps

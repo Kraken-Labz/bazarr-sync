@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import uuid
 from functools import partial
 from typing import Any, cast
 
@@ -20,7 +22,9 @@ from .const import (
     ACTION_DOWNLOAD_BEST_SUBTITLE,
     ACTION_DOWNLOAD_SUBTITLE,
     ACTION_FIND_SUBTITLES,
+    ACTION_SEARCH_ALL_MISSING,
     ACTION_SEARCH_SUBTITLES,
+    ACTION_SYNC_ALL_SUBTITLES,
     ACTION_SYNC_SUBTITLE,
     ACTION_SYNC_SUBTITLE_AUTO,
     DOMAIN,
@@ -32,6 +36,29 @@ from .media_resolver import (
 from .models import ResolvedMedia, SubtitleCandidate
 
 _LOGGER = logging.getLogger(__name__)
+
+_BULK_JOBS_KEY = f"{DOMAIN}_bulk_sync_jobs"
+
+
+def _get_bulk_jobs(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
+    if _BULK_JOBS_KEY not in hass.data:
+        hass.data[_BULK_JOBS_KEY] = {}
+    return hass.data[_BULK_JOBS_KEY]
+
+
+def _is_eligible_subtitle(sub: dict[str, Any], language: str | None = None) -> bool:
+    path = sub.get("path")
+    if not path or not isinstance(path, str):
+        return False
+    if sub.get("forced"):
+        return False
+    if sub.get("embedded_track_id") is not None:
+        return False
+    return not (
+        language is not None
+        and _normalize_language(str(sub.get("name") or sub.get("language") or ""))
+        != _normalize_language(language)
+    )
 
 
 def _get_coordinator(hass: HomeAssistant, entry_id: str) -> BazarrClient:
@@ -332,6 +359,222 @@ async def async_sync_subtitle_auto(
         raise HomeAssistantError(f"Bazarr error: {err}") from err
 
 
+async def async_search_all_missing_subtitles(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Trigger Bazarr wanted search for missing subtitles (movies/episodes).
+
+    This directly triggers Bazarr native tasks:
+    - wanted_search_missing_subtitles_movies
+    - wanted_search_missing_subtitles_series
+
+    It respects all Bazarr language profiles/policies.
+    """
+    entry_id = call.data["config_entry_id"]
+    scope = call.data.get("scope", "all")
+    client = _get_coordinator(hass, entry_id)
+    try:
+        tasks = await client.async_trigger_wanted_search(scope)
+        normalized = []
+        for t in tasks:
+            normalized.append(
+                {
+                    "type": t.get("type"),
+                    "task_id": t.get("task_id"),
+                    "status": t.get("status", "started"),
+                }
+            )
+        return cast(
+            ServiceResponse, {"accepted": True, "scope": scope, "tasks": normalized}
+        )
+    except BazarrError as err:
+        raise HomeAssistantError(f"Bazarr error: {err}") from err
+
+
+async def _sync_all_task(
+    hass: HomeAssistant,
+    entry_id: str,
+    job_id: str,
+    scope: str,
+    language: str | None,
+) -> None:
+    jobs = _get_bulk_jobs(hass)
+    job = jobs.get(job_id)
+    if not job:
+        return
+    client = _get_coordinator(hass, entry_id)
+    eligible: list[dict[str, Any]] = job.get("eligible", [])
+    total = len(eligible)
+    job["total"] = total
+    job["status"] = "running"
+    sem = asyncio.Semaphore(2)
+    processed = 0
+    success = 0
+    skipped = 0
+    failed = 0
+
+    async def _sync_one(item: dict[str, Any]) -> None:
+        nonlocal processed, success, skipped, failed
+        async with sem:
+            if hass.is_stopping:
+                return
+            try:
+                forced = bool(item.get("forced"))
+                if forced:
+                    skipped += 1
+                    return
+                if item.get("embedded_track_id") is not None:
+                    skipped += 1
+                    return
+                await client.async_sync_subtitle(
+                    action="sync",
+                    language="",
+                    path=item["path"],
+                    media_type=item["media_type"],
+                    media_id=item["media_id"],
+                    forced=False,
+                    hearing_impaired=bool(item.get("hearing_impaired")),
+                    original_format=False,
+                    reference=None,
+                )
+                success += 1
+            except BazarrError:
+                failed += 1
+            except Exception:  # noqa: BLE001 - ensure batch continues on unexpected
+                failed += 1
+            finally:
+                processed += 1
+                job["processed"] = processed
+                job["success"] = success
+                job["skipped"] = skipped
+                job["failed"] = failed
+
+    try:
+        for item in eligible:
+            await _sync_one(item)
+            if hass.is_stopping:
+                break
+        if failed == 0 and skipped == 0:
+            job["status"] = "completed"
+        elif failed > 0 and success > 0:
+            job["status"] = "partial_failure"
+        elif failed > 0:
+            job["status"] = "failed"
+        else:
+            job["status"] = "completed"
+    except asyncio.CancelledError:
+        job["status"] = "failed"
+        raise
+    finally:
+        job["processed"] = processed
+
+
+async def async_sync_all_subtitles(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Sync all eligible external subtitles (library-wide).
+
+    Audit: Bazarr 2025.x has no native bulk sync endpoint. Mass Edit sync
+    iterates PATCH /api/subtitles per item. Therefore this action orchestrates
+    per-item sync server-side with low concurrency and background job.
+    """
+    entry_id = call.data["config_entry_id"]
+    scope = call.data.get("scope", "all")
+    language = call.data.get("language")
+    client = _get_coordinator(hass, entry_id)
+    jobs = _get_bulk_jobs(hass)
+
+    eligible: list[dict[str, Any]] = []
+    skipped_count = 0
+
+    try:
+        if scope in ("all", "movies"):
+            movies = await client.async_get_all_movies()
+            for m in movies:
+                subs = m.get("subtitles", [])
+                for sub in subs:
+                    if not _is_eligible_subtitle(sub, language):
+                        if (
+                            sub.get("forced")
+                            or sub.get("embedded_track_id") is not None
+                        ):
+                            skipped_count += 1
+                        continue
+                    path = sub.get("path")
+                    if not isinstance(path, str) or not path:
+                        skipped_count += 1
+                        continue
+                    eligible.append(
+                        {
+                            "path": path,
+                            "media_type": "movie",
+                            "media_id": m.get("radarrId"),
+                            "forced": bool(sub.get("forced")),
+                            "hearing_impaired": bool(sub.get("hi")),
+                            "embedded_track_id": sub.get("embedded_track_id"),
+                        }
+                    )
+        if scope in ("all", "episodes"):
+            episodes = await client.async_get_all_episodes()
+            for ep in episodes:
+                subs = ep.get("subtitles", [])
+                for sub in subs:
+                    if not _is_eligible_subtitle(sub, language):
+                        if (
+                            sub.get("forced")
+                            or sub.get("embedded_track_id") is not None
+                        ):
+                            skipped_count += 1
+                        continue
+                    path = sub.get("path")
+                    if not isinstance(path, str) or not path:
+                        skipped_count += 1
+                        continue
+                    eligible.append(
+                        {
+                            "path": path,
+                            "media_type": "episode",
+                            "media_id": ep.get("sonarrEpisodeId"),
+                            "forced": bool(sub.get("forced")),
+                            "hearing_impaired": bool(sub.get("hi")),
+                            "embedded_track_id": sub.get("embedded_track_id"),
+                        }
+                    )
+    except BazarrError as err:
+        raise HomeAssistantError(f"Bazarr error: {err}") from err
+
+    eligible = [e for e in eligible if e.get("media_id") is not None]
+    job_id = uuid.uuid4().hex[:8]
+    job: dict[str, Any] = {
+        "job_id": job_id,
+        "entry_id": entry_id,
+        "scope": scope,
+        "status": "running",
+        "total": len(eligible),
+        "processed": 0,
+        "success": 0,
+        "skipped": skipped_count,
+        "failed": 0,
+        "eligible": eligible,
+    }
+    jobs[job_id] = job
+
+    # Schedule background task - do not await
+    hass.async_create_task(_sync_all_task(hass, entry_id, job_id, scope, language))
+
+    return cast(
+        ServiceResponse,
+        {
+            "accepted": True,
+            "scope": scope,
+            "job_id": job_id,
+            "eligible_count": len(eligible),
+            "skipped_count": skipped_count,
+            "status": "running",
+        },
+    )
+
+
 # --- Existing actions (unchanged) ---
 
 
@@ -512,6 +755,21 @@ def _register_services(hass: HomeAssistant) -> None:
         }
     )
 
+    search_all_schema = vol.Schema(
+        {
+            vol.Required("config_entry_id"): str,
+            vol.Optional("scope", default="all"): vol.In(["all", "movies", "episodes"]),
+        }
+    )
+
+    sync_all_schema = vol.Schema(
+        {
+            vol.Required("config_entry_id"): str,
+            vol.Optional("scope", default="all"): vol.In(["all", "movies", "episodes"]),
+            vol.Optional("language"): str,
+        }
+    )
+
     # --- Existing schemas (unchanged) ---
 
     search_schema = vol.Schema(
@@ -561,6 +819,8 @@ def _register_services(hass: HomeAssistant) -> None:
     find_handler = partial(async_find_subtitles, hass)
     download_best_handler = partial(async_download_best_subtitle, hass)
     sync_auto_handler = partial(async_sync_subtitle_auto, hass)
+    search_all_handler = partial(async_search_all_missing_subtitles, hass)
+    sync_all_handler = partial(async_sync_all_subtitles, hass)
 
     # Existing handlers
     search_handler = partial(async_search_subtitles, hass)
@@ -589,6 +849,22 @@ def _register_services(hass: HomeAssistant) -> None:
         ACTION_SYNC_SUBTITLE_AUTO,
         sync_auto_handler,
         schema=sync_auto_schema,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        ACTION_SEARCH_ALL_MISSING,
+        search_all_handler,
+        schema=search_all_schema,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        ACTION_SYNC_ALL_SUBTITLES,
+        sync_all_handler,
+        schema=sync_all_schema,
         supports_response=SupportsResponse.ONLY,
     )
 

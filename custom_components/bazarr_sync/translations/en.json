@@ -150,6 +150,33 @@
         }
       }
     },
+    "search_all_missing_subtitles": {
+      "name": "Search All Missing Subtitles",
+      "description": "Trigger Bazarr wanted search for missing subtitles",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "scope": {
+          "name": "Scope"
+        }
+      }
+    },
+    "sync_all_subtitles": {
+      "name": "Sync All Available Subtitles",
+      "description": "Synchronize all eligible external subtitles",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "scope": {
+          "name": "Scope"
+        },
+        "language": {
+          "name": "Language"
+        }
+      }
+    },
     "search_subtitles": {
       "name": "Search Subtitles (Advanced / API)",
       "description": "Search for available subtitles for a movie or episode",

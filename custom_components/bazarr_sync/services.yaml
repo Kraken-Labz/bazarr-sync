@@ -220,6 +220,58 @@ sync_subtitle_auto:
       selector:
         boolean:
 
+search_all_missing_subtitles:
+  name: "Search All Missing Subtitles"
+  description: "Trigger Bazarr wanted search for missing subtitles (may download automatically per Bazarr settings)"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    scope:
+      name: Scope
+      description: Which media types to search
+      required: false
+      default: all
+      selector:
+        select:
+          options:
+            - all
+            - movies
+            - episodes
+
+sync_all_subtitles:
+  name: "Sync All Available Subtitles"
+  description: "Synchronize all eligible external subtitles (CPU intensive, runs in background)"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    scope:
+      name: Scope
+      description: Which media types to sync
+      required: false
+      default: all
+      selector:
+        select:
+          options:
+            - all
+            - movies
+            - episodes
+    language:
+      name: Language
+      description: Limit to subtitles matching this language (optional, e.g. en, pt-BR)
+      required: false
+      selector:
+        text:
+
 search_subtitles:
   name: "Search Subtitles (Advanced / API)"
   description: "Search for available subtitles for a movie or episode using internal IDs"

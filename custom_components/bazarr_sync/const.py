@@ -15,6 +15,10 @@ API_PROVIDERS_MOVIES = "/api/providers/movies"
 API_PROVIDERS_EPISODES = "/api/providers/episodes"
 API_SUBTITLES = "/api/subtitles"
 
+# API endpoints
+API_TASKS = "/api/tasks"
+API_SYSTEM_TASKS = "/api/system/tasks"
+
 # WebSocket commands
 WS_TYPE_GET_MEDIA = "bazarr_sync/get_media"
 WS_TYPE_GET_SUBTITLES = "bazarr_sync/get_subtitles"
@@ -32,3 +36,11 @@ ACTION_SYNC_SUBTITLE = "sync_subtitle"
 ACTION_FIND_SUBTITLES = "find_subtitles"
 ACTION_DOWNLOAD_BEST_SUBTITLE = "download_best_subtitle"
 ACTION_SYNC_SUBTITLE_AUTO = "sync_subtitle_auto"
+
+# Library-wide bulk actions
+ACTION_SEARCH_ALL_MISSING = "search_all_missing_subtitles"
+ACTION_SYNC_ALL_SUBTITLES = "sync_all_subtitles"
+
+# Native Bazarr task IDs (audited against Bazarr 2025.x UI/System Tasks)
+TASK_WANTED_MOVIES = "wanted_search_missing_subtitles_movies"
+TASK_WANTED_SERIES = "wanted_search_missing_subtitles_series"

@@ -106,6 +106,33 @@ Synchronize an installed subtitle against a reference track automatically.
 
 **Response**: `{"success": true, "resolved_media": {...}, "subtitle": {...}}` — resolved media info + synced subtitle info.
 
+### Library-wide Actions
+
+#### `bazarr_sync.search_all_missing_subtitles`
+
+Trigger Bazarr wanted search for missing subtitles. **May automatically download** per Bazarr language profiles/settings. Respects monitored state, profiles, scores.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config_entry_id` | string | Yes | Config Entry ID |
+| `scope` | `all` \| `movies` \| `episodes` | No | Default `all` |
+
+Uses native Bazarr tasks `wanted_search_missing_subtitles_movies` / `wanted_search_missing_subtitles_series` via `POST /api/tasks`. Returns `{"accepted": true, "scope": "all", "tasks": [...]}` immediately.
+
+#### `bazarr_sync.sync_all_subtitles`
+
+Synchronize all eligible external subtitles. **CPU intensive**, runs as background job with concurrency 2.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config_entry_id` | string | Yes | Config Entry ID |
+| `scope` | `all` \| `movies` \| `episodes` | No | Default `all` |
+| `language` | string | No | Filter by language (e.g. `pt-BR`) |
+
+Only external, non-forced, non-embedded subtitles are synced. Forced/embedded are skipped. Returns `{"accepted": true, "job_id": "...", "eligible_count": 42, "skipped_count": 7}`.
+
+> No native Bazarr bulk sync endpoint exists — orchestration is server-side in Bazarr Sync.
+
 ## Advanced / API Actions
 
 These actions use internal Bazarr IDs (`radarrId`, `sonarrEpisodeId`, `sonarrSeriesId`) and are intended for custom frontend cards (e.g. Octopus Media Card), advanced automations, and integrations that already have the internal IDs.
