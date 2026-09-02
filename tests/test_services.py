@@ -463,6 +463,7 @@ class TestServicesYAML:
             "sync_subtitle_auto",
             "search_all_missing_subtitles",
             "sync_all_subtitles",
+            "get_bulk_sync_status",
             "search_subtitles",
             "download_subtitle",
             "sync_subtitle",
@@ -728,12 +729,13 @@ class TestLifecycle:
                 ACTION_SYNC_SUBTITLE_AUTO,
                 ACTION_SEARCH_ALL_MISSING,
                 ACTION_SYNC_ALL_SUBTITLES,
+                "get_bulk_sync_status",
                 ACTION_SEARCH_SUBTITLES,
                 ACTION_DOWNLOAD_SUBTITLE,
                 ACTION_SYNC_SUBTITLE,
             }
             assert registered_actions == expected_actions
-            assert len(register_calls) == 8
+            assert len(register_calls) == 9
 
     async def test_async_setup_entry_does_not_register_actions(
         self, hass, mock_entry, mock_client

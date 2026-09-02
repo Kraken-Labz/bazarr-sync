@@ -22,6 +22,7 @@ from .const import (
     ACTION_DOWNLOAD_BEST_SUBTITLE,
     ACTION_DOWNLOAD_SUBTITLE,
     ACTION_FIND_SUBTITLES,
+    ACTION_GET_BULK_SYNC_STATUS,
     ACTION_SEARCH_ALL_MISSING,
     ACTION_SEARCH_SUBTITLES,
     ACTION_SYNC_ALL_SUBTITLES,
@@ -54,10 +55,12 @@ def _is_eligible_subtitle(sub: dict[str, Any], language: str | None = None) -> b
         return False
     if sub.get("embedded_track_id") is not None:
         return False
+    code2 = sub.get("code2")
+    if not code2 or not isinstance(code2, str) or not code2.strip():
+        return False
     return not (
         language is not None
-        and _normalize_language(str(sub.get("name") or sub.get("language") or ""))
-        != _normalize_language(language)
+        and _normalize_language(code2) != _normalize_language(language)
     )
 
 
@@ -362,13 +365,10 @@ async def async_sync_subtitle_auto(
 async def async_search_all_missing_subtitles(
     hass: HomeAssistant, call: ServiceCall
 ) -> ServiceResponse:
-    """Trigger Bazarr wanted search for missing subtitles (movies/episodes).
+    """Trigger Bazarr wanted search for missing subtitles.
 
-    This directly triggers Bazarr native tasks:
-    - wanted_search_missing_subtitles_movies
-    - wanted_search_missing_subtitles_series
-
-    It respects all Bazarr language profiles/policies.
+    Native endpoint: POST /api/system/tasks with taskid.
+    Pre-flight GET /api/system/tasks checks job_running.
     """
     entry_id = call.data["config_entry_id"]
     scope = call.data.get("scope", "all")
@@ -384,11 +384,19 @@ async def async_search_all_missing_subtitles(
                     "status": t.get("status", "started"),
                 }
             )
+        accepted = any(
+            t.get("status") in ("started", "already_running") for t in normalized
+        )
+        if not normalized:
+            accepted = False
         return cast(
-            ServiceResponse, {"accepted": True, "scope": scope, "tasks": normalized}
+            ServiceResponse, {"accepted": accepted, "scope": scope, "tasks": normalized}
         )
     except BazarrError as err:
         raise HomeAssistantError(f"Bazarr error: {err}") from err
+
+
+SUBMISSION_CONCURRENCY = 1
 
 
 async def _sync_all_task(
@@ -404,31 +412,32 @@ async def _sync_all_task(
         return
     client = _get_coordinator(hass, entry_id)
     eligible: list[dict[str, Any]] = job.get("eligible", [])
-    total = len(eligible)
-    job["total"] = total
-    job["status"] = "running"
-    sem = asyncio.Semaphore(2)
+    job["total"] = len(eligible)
+    job["status"] = "submitting"
+    preflight_skipped: int = int(job.get("skipped", 0))
     processed = 0
-    success = 0
-    skipped = 0
+    submitted = 0
+    skipped = preflight_skipped
     failed = 0
 
-    async def _sync_one(item: dict[str, Any]) -> None:
-        nonlocal processed, success, skipped, failed
-        async with sem:
+    try:
+        for item in eligible:
             if hass.is_stopping:
-                return
+                job["status"] = "cancelled"
+                break
             try:
-                forced = bool(item.get("forced"))
-                if forced:
+                if item.get("forced"):
                     skipped += 1
-                    return
+                    continue
                 if item.get("embedded_track_id") is not None:
                     skipped += 1
-                    return
+                    continue
+                if not item.get("language_code"):
+                    skipped += 1
+                    continue
                 await client.async_sync_subtitle(
                     action="sync",
-                    language="",
+                    language=str(item.get("language_code")),
                     path=item["path"],
                     media_type=item["media_type"],
                     media_id=item["media_id"],
@@ -437,36 +446,37 @@ async def _sync_all_task(
                     original_format=False,
                     reference=None,
                 )
-                success += 1
+                submitted += 1
             except BazarrError:
                 failed += 1
-            except Exception:  # noqa: BLE001 - ensure batch continues on unexpected
+            except Exception:  # noqa: BLE001
                 failed += 1
             finally:
                 processed += 1
                 job["processed"] = processed
-                job["success"] = success
+                job["submitted"] = submitted
                 job["skipped"] = skipped
                 job["failed"] = failed
-
-    try:
-        for item in eligible:
-            await _sync_one(item)
-            if hass.is_stopping:
-                break
-        if failed == 0 and skipped == 0:
-            job["status"] = "completed"
-        elif failed > 0 and success > 0:
+        else:
+            pass
+        if hass.is_stopping or processed < len(eligible):
+            job["status"] = "cancelled"
+        elif failed == 0:
+            job["status"] = "submission_completed"
+        elif submitted > 0 and failed > 0:
             job["status"] = "partial_failure"
         elif failed > 0:
             job["status"] = "failed"
         else:
-            job["status"] = "completed"
+            job["status"] = "submission_completed"
     except asyncio.CancelledError:
-        job["status"] = "failed"
+        job["status"] = "cancelled"
         raise
     finally:
         job["processed"] = processed
+        job["submitted"] = submitted
+        job["skipped"] = skipped
+        job["failed"] = failed
 
 
 async def async_sync_all_subtitles(
@@ -474,15 +484,27 @@ async def async_sync_all_subtitles(
 ) -> ServiceResponse:
     """Sync all eligible external subtitles (library-wide).
 
-    Audit: Bazarr 2025.x has no native bulk sync endpoint. Mass Edit sync
-    iterates PATCH /api/subtitles per item. Therefore this action orchestrates
-    per-item sync server-side with low concurrency and background job.
+    Audit: Bazarr 2025.x has no native bulk sync endpoint (audited Mass Edit
+    -> PATCH /api/subtitles per item). This orchestrates serial submissions
+    (SUBMISSION_CONCURRENCY=1) as background job. Each PATCH just submits to
+    Bazarr internal queue; physical sync completes asynchronously.
     """
     entry_id = call.data["config_entry_id"]
     scope = call.data.get("scope", "all")
     language = call.data.get("language")
     client = _get_coordinator(hass, entry_id)
     jobs = _get_bulk_jobs(hass)
+
+    for existing in jobs.values():
+        if existing.get("entry_id") == entry_id and existing.get("status") in (
+            "preparing",
+            "submitting",
+            "running",
+        ):
+            raise HomeAssistantError(
+                f"Bulk sync already running for this instance (job_id={existing.get('job_id')}). "
+                f"Wait for completion or check status via get_bulk_sync_status."
+            )
 
     eligible: list[dict[str, Any]] = []
     skipped_count = 0
@@ -493,12 +515,12 @@ async def async_sync_all_subtitles(
             for m in movies:
                 subs = m.get("subtitles", [])
                 for sub in subs:
+                    code2 = sub.get("code2")
+                    if not code2 or not isinstance(code2, str) or not code2.strip():
+                        skipped_count += 1
+                        continue
                     if not _is_eligible_subtitle(sub, language):
-                        if (
-                            sub.get("forced")
-                            or sub.get("embedded_track_id") is not None
-                        ):
-                            skipped_count += 1
+                        skipped_count += 1
                         continue
                     path = sub.get("path")
                     if not isinstance(path, str) or not path:
@@ -509,6 +531,7 @@ async def async_sync_all_subtitles(
                             "path": path,
                             "media_type": "movie",
                             "media_id": m.get("radarrId"),
+                            "language_code": code2,
                             "forced": bool(sub.get("forced")),
                             "hearing_impaired": bool(sub.get("hi")),
                             "embedded_track_id": sub.get("embedded_track_id"),
@@ -519,12 +542,12 @@ async def async_sync_all_subtitles(
             for ep in episodes:
                 subs = ep.get("subtitles", [])
                 for sub in subs:
+                    code2 = sub.get("code2")
+                    if not code2 or not isinstance(code2, str) or not code2.strip():
+                        skipped_count += 1
+                        continue
                     if not _is_eligible_subtitle(sub, language):
-                        if (
-                            sub.get("forced")
-                            or sub.get("embedded_track_id") is not None
-                        ):
-                            skipped_count += 1
+                        skipped_count += 1
                         continue
                     path = sub.get("path")
                     if not isinstance(path, str) or not path:
@@ -535,6 +558,7 @@ async def async_sync_all_subtitles(
                             "path": path,
                             "media_type": "episode",
                             "media_id": ep.get("sonarrEpisodeId"),
+                            "language_code": code2,
                             "forced": bool(sub.get("forced")),
                             "hearing_impaired": bool(sub.get("hi")),
                             "embedded_track_id": sub.get("embedded_track_id"),
@@ -549,17 +573,16 @@ async def async_sync_all_subtitles(
         "job_id": job_id,
         "entry_id": entry_id,
         "scope": scope,
-        "status": "running",
+        "status": "submitting",
         "total": len(eligible),
         "processed": 0,
-        "success": 0,
+        "submitted": 0,
         "skipped": skipped_count,
         "failed": 0,
         "eligible": eligible,
     }
     jobs[job_id] = job
 
-    # Schedule background task - do not await
     hass.async_create_task(_sync_all_task(hass, entry_id, job_id, scope, language))
 
     return cast(
@@ -570,7 +593,34 @@ async def async_sync_all_subtitles(
             "job_id": job_id,
             "eligible_count": len(eligible),
             "skipped_count": skipped_count,
-            "status": "running",
+            "status": "submitting",
+        },
+    )
+
+
+async def async_get_bulk_sync_status(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Get status of a bulk sync job (read-only)."""
+    entry_id = call.data["config_entry_id"]
+    job_id = call.data["job_id"]
+    jobs = _get_bulk_jobs(hass)
+    job = jobs.get(job_id)
+    if not job:
+        raise HomeAssistantError(f"Bulk sync job '{job_id}' not found")
+    if job.get("entry_id") != entry_id:
+        raise HomeAssistantError("Job does not belong to this config entry")
+    return cast(
+        ServiceResponse,
+        {
+            "job_id": job.get("job_id"),
+            "status": job.get("status"),
+            "scope": job.get("scope"),
+            "total": job.get("total"),
+            "processed": job.get("processed", 0),
+            "submitted": job.get("submitted", 0),
+            "skipped": job.get("skipped", 0),
+            "failed": job.get("failed", 0),
         },
     )
 
@@ -770,6 +820,13 @@ def _register_services(hass: HomeAssistant) -> None:
         }
     )
 
+    bulk_status_schema = vol.Schema(
+        {
+            vol.Required("config_entry_id"): str,
+            vol.Required("job_id"): str,
+        }
+    )
+
     # --- Existing schemas (unchanged) ---
 
     search_schema = vol.Schema(
@@ -821,6 +878,7 @@ def _register_services(hass: HomeAssistant) -> None:
     sync_auto_handler = partial(async_sync_subtitle_auto, hass)
     search_all_handler = partial(async_search_all_missing_subtitles, hass)
     sync_all_handler = partial(async_sync_all_subtitles, hass)
+    bulk_status_handler = partial(async_get_bulk_sync_status, hass)
 
     # Existing handlers
     search_handler = partial(async_search_subtitles, hass)
@@ -865,6 +923,14 @@ def _register_services(hass: HomeAssistant) -> None:
         ACTION_SYNC_ALL_SUBTITLES,
         sync_all_handler,
         schema=sync_all_schema,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        ACTION_GET_BULK_SYNC_STATUS,
+        bulk_status_handler,
+        schema=bulk_status_schema,
         supports_response=SupportsResponse.ONLY,
     )
 

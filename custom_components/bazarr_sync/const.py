@@ -40,6 +40,7 @@ ACTION_SYNC_SUBTITLE_AUTO = "sync_subtitle_auto"
 # Library-wide bulk actions
 ACTION_SEARCH_ALL_MISSING = "search_all_missing_subtitles"
 ACTION_SYNC_ALL_SUBTITLES = "sync_all_subtitles"
+ACTION_GET_BULK_SYNC_STATUS = "get_bulk_sync_status"
 
 # Native Bazarr task IDs (audited against Bazarr 2025.x UI/System Tasks)
 TASK_WANTED_MOVIES = "wanted_search_missing_subtitles_movies"

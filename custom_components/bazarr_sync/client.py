@@ -23,7 +23,7 @@ from .const import (
     API_SUBTITLES,
     API_SYSTEM_HEALTH,
     API_SYSTEM_STATUS,
-    API_TASKS,
+    API_SYSTEM_TASKS,
 )
 from .util import generate_external_reference_id
 
@@ -567,58 +567,63 @@ class BazarrClient:
 
         await self._request("PATCH", API_SUBTITLES, data=data)
 
+    async def async_get_task_status(self, task_id: str) -> dict[str, Any]:
+        """Get native task status via GET /api/system/tasks."""
+        result = await self._request(
+            "GET", API_SYSTEM_TASKS, params={"taskid": task_id}
+        )
+        if isinstance(result, dict):
+            # Bazarr returns {data: [{...}]} or direct dict
+            data = result.get("data", result)
+            if isinstance(data, list) and data:
+                return data[0]
+            if isinstance(data, dict):
+                return data
+            return result
+        return {}
+
     async def async_trigger_task(self, task_id: str) -> dict[str, Any]:
-        """Trigger a native Bazarr system task.
-
-        Bazarr exposes wanted search as system tasks:
-        - wanted_search_missing_subtitles_movies
-        - wanted_search_missing_subtitles_series
-
-        Endpoint audited against Bazarr 2025.x:
-        POST /api/tasks with form field taskid=<task_id>
-        Fallback is POST /api/system/tasks for older builds.
-        Returns native task response (status/queued/started).
-        """
-        try:
-            result = await self._request("POST", API_TASKS, data={"taskid": task_id})
-            return result if isinstance(result, dict) else {"status": "started"}
-        except BazarrNotFoundError:
-            result = await self._request(
-                "POST", "/api/system/tasks", data={"taskid": task_id}
-            )
-            return result if isinstance(result, dict) else {"status": "started"}
+        """Trigger a native Bazarr system task via canonical POST /api/system/tasks."""
+        result = await self._request("POST", API_SYSTEM_TASKS, data={"taskid": task_id})
+        return result if isinstance(result, dict) else {"status": "started"}
 
     async def async_trigger_wanted_search(
         self, scope: str = "all"
     ) -> list[dict[str, Any]]:
-        """Trigger wanted search per scope using native tasks."""
+        """Trigger wanted search per scope with already_running guard."""
         tasks: list[dict[str, Any]] = []
+        mapping = []
         if scope in ("all", "movies"):
             from .const import TASK_WANTED_MOVIES
 
-            try:
-                res = await self.async_trigger_task(TASK_WANTED_MOVIES)
-                tasks.append({"type": "movies", "task_id": TASK_WANTED_MOVIES, **res})
-            except BazarrError as err:
-                tasks.append(
-                    {
-                        "type": "movies",
-                        "task_id": TASK_WANTED_MOVIES,
-                        "status": "error",
-                        "error": str(err),
-                    }
-                )
+            mapping.append(("movies", TASK_WANTED_MOVIES))
         if scope in ("all", "episodes"):
             from .const import TASK_WANTED_SERIES
 
+            mapping.append(("episodes", TASK_WANTED_SERIES))
+
+        for type_name, task_id in mapping:
             try:
-                res = await self.async_trigger_task(TASK_WANTED_SERIES)
-                tasks.append({"type": "episodes", "task_id": TASK_WANTED_SERIES, **res})
+                status = await self.async_get_task_status(task_id)
+                if status.get("job_running"):
+                    tasks.append(
+                        {
+                            "type": type_name,
+                            "task_id": task_id,
+                            "status": "already_running",
+                        }
+                    )
+                    continue
+                res = await self.async_trigger_task(task_id)
+                # Normalize status
+                if "status" not in res:
+                    res["status"] = "started"
+                tasks.append({"type": type_name, "task_id": task_id, **res})
             except BazarrError as err:
                 tasks.append(
                     {
-                        "type": "episodes",
-                        "task_id": TASK_WANTED_SERIES,
+                        "type": type_name,
+                        "task_id": task_id,
                         "status": "error",
                         "error": str(err),
                     }

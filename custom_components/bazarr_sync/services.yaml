@@ -245,7 +245,7 @@ search_all_missing_subtitles:
 
 sync_all_subtitles:
   name: "Sync All Available Subtitles"
-  description: "Synchronize all eligible external subtitles (CPU intensive, runs in background)"
+  description: "Synchronize all eligible external subtitles (CPU intensive, runs in background). Each PATCH just submits to Bazarr queue; physical sync completes asynchronously."
   fields:
     config_entry_id:
       name: Config Entry
@@ -269,6 +269,24 @@ sync_all_subtitles:
       name: Language
       description: Limit to subtitles matching this language (optional, e.g. en, pt-BR)
       required: false
+      selector:
+        text:
+
+get_bulk_sync_status:
+  name: "Get Bulk Sync Status"
+  description: "Get status of a background bulk sync job"
+  fields:
+    config_entry_id:
+      name: Config Entry
+      description: The config entry ID for the Bazarr Sync integration
+      required: true
+      selector:
+        config_entry:
+          integration: bazarr_sync
+    job_id:
+      name: Job ID
+      description: Bulk sync job identifier returned by sync_all_subtitles
+      required: true
       selector:
         text:
 

@@ -150,6 +150,80 @@ class TestSearchAll:
                 pass
             assert mock_client.async_trigger_wanted_search.call_count == 1
 
+    async def test_canonical_endpoint(self):
+        from custom_components.bazarr_sync.const import API_SYSTEM_TASKS
+
+        mock_client = AsyncMock()
+        mock_client.async_get_task_status = AsyncMock(
+            return_value={"job_running": False}
+        )
+        mock_client.async_trigger_task = AsyncMock(return_value={"status": "started"})
+        mock_client.async_trigger_wanted_search = AsyncMock(
+            wraps=mock_client.async_trigger_wanted_search
+        )
+        # Directly test client canonical endpoint via _request mock
+        from custom_components.bazarr_sync.client import BazarrClient
+
+        client = BazarrClient(MagicMock(), "http://x", "k")
+        client._request = AsyncMock(return_value={"status": "started"})
+        await client.async_trigger_task("wanted_search_missing_subtitles_movies")
+        client._request.assert_called_with(
+            "POST",
+            API_SYSTEM_TASKS,
+            data={"taskid": "wanted_search_missing_subtitles_movies"},
+        )
+
+    async def test_already_running(self):
+        mock_client = AsyncMock()
+        mock_client.async_get_task_status = AsyncMock(
+            return_value={"job_running": True}
+        )
+        mock_client.async_trigger_task = AsyncMock()
+        mock_client.async_trigger_wanted_search = AsyncMock(
+            side_effect=lambda scope: [
+                {
+                    "type": "movies",
+                    "task_id": TASK_WANTED_MOVIES,
+                    "status": "already_running",
+                }
+            ]
+        )
+        # Simulate service-level already_running
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            # Mock to return already_running directly
+            mock_client.async_trigger_wanted_search = AsyncMock(
+                return_value=[
+                    {
+                        "type": "movies",
+                        "task_id": TASK_WANTED_MOVIES,
+                        "status": "already_running",
+                    }
+                ]
+            )
+            call = make_call({"config_entry_id": "e1", "scope": "movies"})
+            res = await async_search_all_missing_subtitles(MagicMock(), call)
+            assert res["tasks"][0]["status"] == "already_running"
+            assert res["accepted"] is True
+
+    async def test_accepted_false_when_all_error(self):
+        mock_client = AsyncMock()
+        mock_client.async_trigger_wanted_search = AsyncMock(
+            return_value=[
+                {"type": "movies", "task_id": TASK_WANTED_MOVIES, "status": "error"},
+                {"type": "episodes", "task_id": TASK_WANTED_SERIES, "status": "error"},
+            ]
+        )
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            call = make_call({"config_entry_id": "e1", "scope": "all"})
+            res = await async_search_all_missing_subtitles(MagicMock(), call)
+            assert res["accepted"] is False
+
 
 class TestSyncAll:
     @pytest.fixture
@@ -162,6 +236,7 @@ class TestSyncAll:
                     {
                         "path": "/subs/m1.en.srt",
                         "name": "English",
+                        "code2": "en",
                         "forced": False,
                         "hi": False,
                         "embedded_track_id": None,
@@ -169,11 +244,12 @@ class TestSyncAll:
                     {
                         "path": "/subs/m1.forced.srt",
                         "name": "English",
+                        "code2": "en",
                         "forced": True,
                         "hi": False,
                         "embedded_track_id": None,
                     },
-                    {"path": None, "name": "Bad", "forced": False},
+                    {"path": None, "name": "Bad", "code2": "en", "forced": False},
                 ],
             }
         ]
@@ -188,6 +264,7 @@ class TestSyncAll:
                     {
                         "path": "/subs/e1.en.srt",
                         "name": "English",
+                        "code2": "en",
                         "forced": False,
                         "hi": False,
                         "embedded_track_id": None,
@@ -195,6 +272,7 @@ class TestSyncAll:
                     {
                         "path": "/subs/e1.embedded",
                         "name": "English",
+                        "code2": "en",
                         "forced": False,
                         "hi": False,
                         "embedded_track_id": 1,
@@ -222,7 +300,7 @@ class TestSyncAll:
             res = await async_sync_all_subtitles(hass, call)
             assert res["scope"] == "movies"
             assert res["eligible_count"] == 1
-            assert res["skipped_count"] == 1
+            assert res["skipped_count"] == 2
 
     async def test_scope_episodes(self, episode_with_subs):
         mock_client = AsyncMock()
@@ -301,11 +379,11 @@ class TestSyncAll:
             assert res["skipped_count"] == 1
 
     async def test_language_filter(self, movie_with_subs):
-        # Add pt-BR subtitle
         movie_with_subs[0]["subtitles"].append(
             {
                 "path": "/subs/m1.pt.srt",
                 "name": "Portuguese",
+                "code2": "pt",
                 "forced": False,
                 "hi": False,
                 "embedded_track_id": None,
@@ -326,13 +404,11 @@ class TestSyncAll:
             return_value=mock_client,
         ):
             call = make_call(
-                {"config_entry_id": "e1", "scope": "movies", "language": "pt-BR"}
+                {"config_entry_id": "e1", "scope": "movies", "language": "pt"}
             )
             res = await async_sync_all_subtitles(hass, call)
-            # Only Portuguese should be eligible, English skipped not counted as skipped? eligible 0?
-            # Our _is_eligible returns false for non-matching language, but not counted as skipped unless forced/embedded.
-            # So eligible 0, skipped 1 (forced)
-            assert res["eligible_count"] == 0 or res["eligible_count"] == 1
+            assert res["eligible_count"] == 1
+            assert res["skipped_count"] == 3
 
     async def test_no_paths_in_response(self, movie_with_subs):
         mock_client = AsyncMock()
@@ -363,6 +439,7 @@ class TestSyncAll:
                     {
                         "path": "/subs/a.srt",
                         "name": "English",
+                        "code2": "en",
                         "forced": False,
                         "hi": False,
                         "embedded_track_id": None,
@@ -428,3 +505,154 @@ class TestSyncAll:
             assert res["scope"] == "movies"
             # Ensure client2 not used
             mock_client2.async_get_all_movies.assert_not_called()
+
+    async def test_missing_code2_skipped(self):
+        movies = [
+            {
+                "radarrId": 1,
+                "subtitles": [
+                    {
+                        "path": "/subs/a.srt",
+                        "name": "English",
+                        "code2": "",
+                        "forced": False,
+                        "hi": False,
+                        "embedded_track_id": None,
+                    },
+                    {
+                        "path": "/subs/b.srt",
+                        "name": "English",
+                        "code2": None,
+                        "forced": False,
+                        "hi": False,
+                        "embedded_track_id": None,
+                    },
+                    {
+                        "path": "/subs/c.srt",
+                        "name": "English",
+                        "code2": "en",
+                        "forced": False,
+                        "hi": False,
+                        "embedded_track_id": None,
+                    },
+                ],
+            }
+        ]
+        mock_client = AsyncMock()
+        mock_client.async_get_all_movies = AsyncMock(return_value=movies)
+        mock_client.async_get_all_episodes = AsyncMock(return_value=[])
+        mock_client.async_sync_subtitle = AsyncMock()
+        hass = MagicMock()
+        hass.data = {}
+        hass.async_create_task = MagicMock(
+            side_effect=lambda coro: asyncio.ensure_future(coro)
+        )
+        hass.is_stopping = False
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            call = make_call({"config_entry_id": "e1", "scope": "movies"})
+            res = await async_sync_all_subtitles(hass, call)
+            assert res["eligible_count"] == 1
+            assert res["skipped_count"] == 2
+
+    async def test_duplicate_active_bulk_prevented(self, movie_with_subs):
+        mock_client = AsyncMock()
+        mock_client.async_get_all_movies = AsyncMock(return_value=movie_with_subs)
+        mock_client.async_get_all_episodes = AsyncMock(return_value=[])
+        mock_client.async_sync_subtitle = AsyncMock()
+        hass = MagicMock()
+        hass.data = {}
+        hass.async_create_task = MagicMock(
+            side_effect=lambda coro: asyncio.ensure_future(coro)
+        )
+        hass.is_stopping = False
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            call = make_call({"config_entry_id": "e1", "scope": "movies"})
+            await async_sync_all_subtitles(hass, call)
+            # Second call should fail due to active job
+            with pytest.raises(HomeAssistantError, match="already running"):
+                await async_sync_all_subtitles(hass, call)
+
+    async def test_bulk_status(self, movie_with_subs):
+        mock_client = AsyncMock()
+        mock_client.async_get_all_movies = AsyncMock(return_value=movie_with_subs)
+        mock_client.async_get_all_episodes = AsyncMock(return_value=[])
+        mock_client.async_sync_subtitle = AsyncMock()
+        hass = MagicMock()
+        hass.data = {}
+        hass.async_create_task = MagicMock(
+            side_effect=lambda coro: asyncio.ensure_future(coro)
+        )
+        hass.is_stopping = False
+        from custom_components.bazarr_sync.services import async_get_bulk_sync_status
+
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            call = make_call({"config_entry_id": "e1", "scope": "movies"})
+            res = await async_sync_all_subtitles(hass, call)
+            job_id = res["job_id"]
+            status_call = make_call({"config_entry_id": "e1", "job_id": job_id})
+            status = await async_get_bulk_sync_status(hass, status_call)
+            assert status["job_id"] == job_id
+            assert "total" in status
+
+    async def test_shutdown_cancels(self):
+        movies = [
+            {
+                "radarrId": 1,
+                "subtitles": [
+                    {
+                        "path": "/subs/a.srt",
+                        "name": "English",
+                        "code2": "en",
+                        "forced": False,
+                        "hi": False,
+                        "embedded_track_id": None,
+                    },
+                    {
+                        "path": "/subs/b.srt",
+                        "name": "English",
+                        "code2": "en",
+                        "forced": False,
+                        "hi": False,
+                        "embedded_track_id": None,
+                    },
+                ],
+            }
+        ]
+        mock_client = AsyncMock()
+        mock_client.async_get_all_movies = AsyncMock(return_value=movies)
+        mock_client.async_get_all_episodes = AsyncMock(return_value=[])
+
+        async def slow_sync(*args, **kwargs):
+            await asyncio.sleep(0.05)
+
+        mock_client.async_sync_subtitle = slow_sync
+        hass = MagicMock()
+        hass.data = {}
+        hass.async_create_task = MagicMock(
+            side_effect=lambda coro: asyncio.ensure_future(coro)
+        )
+        hass.is_stopping = True
+        with patch(
+            "custom_components.bazarr_sync.services._get_coordinator",
+            return_value=mock_client,
+        ):
+            call = make_call({"config_entry_id": "e1", "scope": "movies"})
+            res = await async_sync_all_subtitles(hass, call)
+            await asyncio.sleep(0.2)
+            from custom_components.bazarr_sync.services import (
+                async_get_bulk_sync_status,
+            )
+
+            status = await async_get_bulk_sync_status(
+                hass, make_call({"config_entry_id": "e1", "job_id": res["job_id"]})
+            )
+            assert status["status"] == "cancelled"

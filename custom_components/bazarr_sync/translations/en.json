@@ -177,6 +177,18 @@
         }
       }
     },
+    "get_bulk_sync_status": {
+      "name": "Get Bulk Sync Status",
+      "description": "Get status of a background bulk sync job",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config Entry"
+        },
+        "job_id": {
+          "name": "Job ID"
+        }
+      }
+    },
     "search_subtitles": {
       "name": "Search Subtitles (Advanced / API)",
       "description": "Search for available subtitles for a movie or episode",
